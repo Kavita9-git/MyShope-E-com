@@ -3,35 +3,21 @@ import React from "react";
 import Layout from "../../components/Layout/Layout";
 import AntDesign from "react-native-vector-icons/AntDesign";
 
-const Dashboard = ({ navigation }) => {
+const ManageOrders = ({ navigation }) => {
   return (
     <Layout>
       <View style={styles.main}>
-        <Text style={styles.heading}>Dashboard</Text>
+        <Text style={styles.heading}>MANAGE ORDERS</Text>
         <View style={styles.btnContainer}>
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("managecategories")}
+            onPress={() => navigation.navigate("updatedeleteorders")}
           >
             <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Manage Categories</Text>
+            <Text style={styles.btnText}>Update/Delete Orders</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("manageproducts")}
-          >
-            <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Manage Products</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("manageorders")}
-          >
-            <AntDesign style={styles.icon} name="bars" />
-            <Text style={styles.btnText}>Manage Orders</Text>
-          </TouchableOpacity>
+          {/* 
 
           <TouchableOpacity style={styles.btn}>
             <AntDesign style={styles.icon} name="user" />
@@ -39,9 +25,14 @@ const Dashboard = ({ navigation }) => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.btn}>
+            <AntDesign style={styles.icon} name="bars" />
+            <Text style={styles.btnText}>Manage Orders</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.btn}>
             <AntDesign style={styles.icon} name="info" />
             <Text style={styles.btnText}>About App</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     </Layout>
@@ -85,4 +76,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Dashboard;
+export default ManageOrders;

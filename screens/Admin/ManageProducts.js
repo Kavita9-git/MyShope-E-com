@@ -3,35 +3,61 @@ import React from "react";
 import Layout from "../../components/Layout/Layout";
 import AntDesign from "react-native-vector-icons/AntDesign";
 
-const Dashboard = ({ navigation }) => {
+const ManageProducts = ({ navigation }) => {
   return (
     <Layout>
       <View style={styles.main}>
-        <Text style={styles.heading}>Dashboard</Text>
+        <Text style={styles.heading}>MANAGE PRODUCTS</Text>
         <View style={styles.btnContainer}>
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("managecategories")}
+            onPress={() => navigation.navigate("createproducts")}
           >
             <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Manage Categories</Text>
+            <Text style={styles.btnText}>Create Products</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("manageproducts")}
+            onPress={() => navigation.navigate("updateproducts")}
           >
             <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Manage Products</Text>
+            <Text style={styles.btnText}>Update Products</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("manageorders")}
+            onPress={() => navigation.navigate("updateimageproducts")}
           >
-            <AntDesign style={styles.icon} name="bars" />
-            <Text style={styles.btnText}>Manage Orders</Text>
+            <AntDesign style={styles.icon} name="edit" />
+            <Text style={styles.btnText}>Update Image Products</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={() => navigation.navigate("deleteimageproducts")}
+          >
+            <AntDesign style={styles.icon} name="edit" />
+            <Text style={styles.btnText}>Delete Image Products</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={() => navigation.navigate("deleteproducts")}
+          >
+            <AntDesign style={styles.icon} name="edit" />
+            <Text style={styles.btnText}>Delete Products</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={() => navigation.navigate("createproductsreviewcomment")}
+          >
+            <AntDesign style={styles.icon} name="edit" />
+            <Text style={styles.btnText}>Review Products</Text>
+          </TouchableOpacity>
+
+          {/* 
 
           <TouchableOpacity style={styles.btn}>
             <AntDesign style={styles.icon} name="user" />
@@ -39,9 +65,14 @@ const Dashboard = ({ navigation }) => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.btn}>
+            <AntDesign style={styles.icon} name="bars" />
+            <Text style={styles.btnText}>Manage Orders</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.btn}>
             <AntDesign style={styles.icon} name="info" />
             <Text style={styles.btnText}>About App</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     </Layout>
@@ -85,4 +116,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Dashboard;
+export default ManageProducts;

@@ -3,45 +3,46 @@ import React from "react";
 import Layout from "../../components/Layout/Layout";
 import AntDesign from "react-native-vector-icons/AntDesign";
 
-const Dashboard = ({ navigation }) => {
+const ManageCategories = ({ navigation }) => {
   return (
     <Layout>
       <View style={styles.main}>
-        <Text style={styles.heading}>Dashboard</Text>
+        <Text style={styles.heading}>Manage Categories</Text>
         <View style={styles.btnContainer}>
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("managecategories")}
+            onPress={() => navigation.navigate("createcategories")}
           >
             <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Manage Categories</Text>
+            <Text style={styles.btnText}>Create Categories</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("manageproducts")}
+            onPress={() => navigation.navigate("updatecategories")}
           >
             <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Manage Products</Text>
+            <Text style={styles.btnText}>Update Categories</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("manageorders")}
+            onPress={() => navigation.navigate("deletecategories")}
           >
+            <AntDesign style={styles.icon} name="delete" />
+            <Text style={styles.btnText}>Delete Categories</Text>
+          </TouchableOpacity>
+
+          {/* 
+          <TouchableOpacity style={styles.btn}>
             <AntDesign style={styles.icon} name="bars" />
             <Text style={styles.btnText}>Manage Orders</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.btn}>
-            <AntDesign style={styles.icon} name="user" />
-            <Text style={styles.btnText}>Manage Users</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.btn}>
             <AntDesign style={styles.icon} name="info" />
             <Text style={styles.btnText}>About App</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     </Layout>
@@ -85,4 +86,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Dashboard;
+export default ManageCategories;

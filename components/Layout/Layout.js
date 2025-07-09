@@ -7,7 +7,7 @@ const Layout = ({ children }) => {
   return (
     <>
       <StatusBar />
-      <View>{children}</View>
+      <View style={{ marginBottom: 50 }}>{children}</View>
       <View style={styles.footer}>
         <Footer />
       </View>
@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
     zIndex: 1, // Ensures footer is above other content
-    borderTopWidth: 1,
+    // borderTopWidth: 1,
     borderColor: "lightgray",
     position: "absolute",
     bottom: 0,

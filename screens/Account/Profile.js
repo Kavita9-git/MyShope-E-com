@@ -7,127 +7,207 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "../../components/Layout/Layout";
-import { UserData } from "../../data/UserData";
 import InputBox from "../../components/Form/InputBox";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  clearMessage,
+  getUserData,
+  updateProfile,
+} from "../../redux/features/auth/userActions";
+import AntDesign from "react-native-vector-icons/AntDesign";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import Toast from "react-native-toast-message";
 
 const Profile = ({ navigation }) => {
-  //State
-  const [email, setEmail] = useState(UserData.email);
-  const [profilePic, setProfilePic] = useState(UserData.profilepic);
-  const [password, setPassword] = useState(UserData.password);
-  const [name, setName] = useState(UserData.name);
-  const [address, setAddress] = useState(UserData.address);
-  const [city, setCity] = useState(UserData.city);
-  const [contact, setContact] = useState(UserData.contact);
+  const dispatch = useDispatch();
+  const { user, msg } = useSelector((state) => state.user);
 
-  //Update Profie
-  const handleUpdate = () => {
-    if (
-      !email ||
-      !password ||
-      !name ||
-      !address ||
-      !city ||
-      !contact ||
-      !profilePic
-    ) {
-      return alert(
-        "Add Email or Password or Name or Address or City or Contact or Profilepic"
-      );
+  useEffect(() => {
+    if (msg) {
+      console.log("error under:", msg);
+      Toast.show({
+        type: "success",
+        text1: "Success !",
+        text2: msg,
+      });
+      dispatch(getUserData());
+      dispatch(clearMessage());
     }
-    alert("Profile Updated Successfully");
-    navigation.navigate("account");
+  }, [msg, dispatch]);
+
+  const [email, setEmail] = useState(user?.email);
+  const [profilePic, setProfilePic] = useState(user?.profilepic);
+  const [name, setName] = useState(user?.name);
+  const [address, setAddress] = useState(user?.address);
+  const [city, setCity] = useState(user?.city);
+  const [phone, setPhone] = useState(user?.phone);
+
+  const handleUpdate = () => {
+    if (!email || !name || !address || !city || !phone) {
+      return alert("Please fill in all required fields.");
+    }
+
+    const formData = { email, name, address, city, phone };
+    dispatch(updateProfile(formData));
   };
+
   return (
     <Layout>
-      <View style={styles.container}>
-        <ScrollView>
-          <View style={styles.imageContainer}>
-            <Image source={{ uri: profilePic }} style={styles.image} />
-            <Pressable onPress={() => alert("Profile Dialogbox")}>
-              <Text style={{ color: "red" }}>Update your profile pic</Text>
-            </Pressable>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: profilePic }} style={styles.image} />
+          <Pressable onPress={() => alert("Profile Dialogbox")}>
+            <Text style={styles.updatePicText}>
+              <AntDesign name="camera" size={16} color="#3498db" /> Update your
+              profile pic
+            </Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.formCard}>
+          <View style={styles.inputWithIcon}>
+            <View style={[styles.iconBox, { backgroundColor: "#2ecc71" }]}>
+              <AntDesign name="user" size={18} color="#fff" />
+            </View>
+            <View style={styles.inputBoxWrapper}>
+              <InputBox
+                value={name}
+                setValue={setName}
+                placeholder={"Enter your Name"}
+                autoComplete={"name"}
+              />
+            </View>
           </View>
-          <InputBox
-            value={name}
-            setValue={setName}
-            placeholder={"Enter your Name"}
-            autoComplete={"name"}
-          />
 
-          <InputBox
-            value={email}
-            setValue={setEmail}
-            placeholder={"Enter your Email"}
-            autoComplete={"email"}
-          />
+          <View style={styles.inputWithIcon}>
+            <View style={[styles.iconBox, { backgroundColor: "#3498db" }]}>
+              <MaterialIcons name="email" size={18} color="#fff" />
+            </View>
+            <View style={styles.inputBoxWrapper}>
+              <InputBox
+                value={email}
+                setValue={setEmail}
+                placeholder={"Enter your Email"}
+                autoComplete={"email"}
+              />
+            </View>
+          </View>
 
-          <InputBox
-            value={password}
-            setValue={setPassword}
-            placeholder={"Enter your Password"}
-            autoComplete={"password"}
-            secureTextEntry={true}
-          />
+          <View style={styles.inputWithIcon}>
+            <View style={[styles.iconBox, { backgroundColor: "#e67e22" }]}>
+              <MaterialIcons name="location-on" size={18} color="#fff" />
+            </View>
+            <View style={styles.inputBoxWrapper}>
+              <InputBox
+                value={address}
+                setValue={setAddress}
+                placeholder={"Enter your Address"}
+                autoComplete={"address-line1"}
+              />
+            </View>
+          </View>
 
-          <InputBox
-            value={address}
-            setValue={setAddress}
-            placeholder={"Enter your Address"}
-            autoComplete={"address-line1"}
-          />
+          <View style={styles.inputWithIcon}>
+            <View style={[styles.iconBox, { backgroundColor: "#9b59b6" }]}>
+              <AntDesign name="enviromento" size={18} color="#fff" />
+            </View>
+            <View style={styles.inputBoxWrapper}>
+              <InputBox
+                value={city}
+                setValue={setCity}
+                placeholder={"Enter your City"}
+                autoComplete={"country"}
+              />
+            </View>
+          </View>
 
-          <InputBox
-            value={city}
-            setValue={setCity}
-            placeholder={"Enter your City"}
-            autoComplete={"country"}
-          />
-
-          <InputBox
-            value={contact}
-            setValue={setContact}
-            placeholder={"Enter your Contact"}
-            autoComplete={"tel"}
-          />
+          <View style={styles.inputWithIcon}>
+            <View style={[styles.iconBox, { backgroundColor: "#f39c12" }]}>
+              <AntDesign name="phone" size={18} color="#fff" />
+            </View>
+            <View style={styles.inputBoxWrapper}>
+              <InputBox
+                value={phone}
+                setValue={setPhone}
+                placeholder={"Enter your Phone"}
+                autoComplete={"tel"}
+              />
+            </View>
+          </View>
 
           <TouchableOpacity style={styles.btnUpdate} onPress={handleUpdate}>
             <Text style={styles.btnUpdateText}>UPDATE PROFILE</Text>
           </TouchableOpacity>
-        </ScrollView>
-      </View>
+        </View>
+      </ScrollView>
     </Layout>
   );
 };
 
+export default Profile;
+
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 20,
+    padding: 20,
+    backgroundColor: "#f5f5f5",
   },
   imageContainer: {
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 20,
   },
   image: {
-    height: 100,
-    width: "100%",
-    resizeMode: "contain",
+    height: 120,
+    width: 120,
+    borderRadius: 60,
+    borderWidth: 2,
+    borderColor: "#ddd",
+  },
+  updatePicText: {
+    color: "#3498db",
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  formCard: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  inputWithIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  inputBoxWrapper: {
+    flex: 1,
+    marginLeft: 10,
   },
   btnUpdate: {
-    backgroundColor: "#000000",
-    height: 40,
-    borderRadius: 20,
-    marginHorizontal: 30,
+    backgroundColor: "#3498db",
+    height: 50,
+    borderRadius: 25,
     justifyContent: "center",
-    marginTop: 10,
+    alignItems: "center",
+    marginTop: 20,
   },
   btnUpdateText: {
-    color: "#ffffff",
-    fontSize: 18,
-    textAlign: "center",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
-
-export default Profile;

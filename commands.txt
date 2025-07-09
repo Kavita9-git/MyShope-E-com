@@ -1,2 +1,253 @@
 //Used to install module require to run project in web
 npm install react-dom@19.0.0 react-native-web@0.20.0 @expo/metro-runtime@~5.0.4 --legacy-peer-deps
+
+
+/uploads/products/files-1751657415720-8736668.jpeg
+
+615e520f-eb1c-432f-b34e-f23629d87eff.jpeg
+badf7aee-085c-4dc3-ba8d-7c59bd3598e5.jpeg
+0dcafd80-4114-441a-88ca-2c505b5aeceb.jpeg
+49b42ad8-a785-42ab-8158-faa99ddcdb8f.jpeg
+a077b93e-9995-4108-8263-3fee25b6eef6.jpeg
+
+
+ for (let file of req.files) {
+      const ext = path.extname(file.originalname);
+      const uniqueName = `${uuidv4()}${ext}`;
+      const filePath = path.join(uploadPath, uniqueName);
+
+      // No need to manually write file since multer.diskStorage already saved it.
+
+      images.push({
+        public_id: uniqueName, // use the unique file name as public_id
+        url: `/uploads/products/${file.filename}`, // file.filename is what multer saves
+      });
+    }
+
+
+    export const createProductController = async (req, res) => {
+  try {
+    const { name, description, price, category, stock, colors } = req.body;
+
+    if (!req.files || req.files.length === 0) {
+      return res
+        .status(400)
+        .send({ success: false, message: "No images uploaded" });
+    }
+
+    // const images = [];
+
+    // for (let file of req.files) {
+    //   const fileUri = getDataUri(file);
+    //   const uploaded = await cloudinary.v2.uploader.upload(fileUri.content);
+    //   images.push({ public_id: uploaded.public_id, url: uploaded.secure_url });
+    // }
+
+    const images = [];
+    const uploadPath = path.join(__dirname, "../uploads"); // Create this folder manually or programmatically
+
+    // Ensure folder exists
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    for (let file of req.files) {
+      const ext = path.extname(file.originalname);
+      const uniqueName = `${uuidv4()}${ext}`;
+      const filePath = path.join(uploadPath, uniqueName);
+      // fs.writeFileSync(filePath, file.buffer);
+
+      images.push({
+        localPath: `/uploads/products/${file.filename}`,
+        name: file.originalname,
+      });
+    }
+
+    let colorsArray = [];
+    if (colors) {
+      try {
+        colorsArray = JSON.parse(colors);
+      } catch (err) {
+        return res.status(400).send({
+          success: false,
+          message: "Invalid colors JSON format",
+        });
+      }
+    } else {
+      return res.status(400).send({
+        success: false,
+        message: "Colors field is required",
+      });
+    }
+
+    for (const color of colorsArray) {
+      if (
+        !color.colorId ||
+        !color.colorName ||
+        !color.colorCode ||
+        !Array.isArray(color.images) ||
+        color.images.length !== 5
+      ) {
+        return res.status(400).send({
+          success: false,
+          message:
+            "Each color must have colorId, colorName, colorCode, and exactly 5 images.",
+          colorsArray,
+        });
+      }
+    }
+
+    const product = await productModel.create({
+      name,
+      description,
+      price,
+      category,
+      stock,
+      images, // For general images
+      colors: JSON.parse(colors), // You'll send the colors array as a JSON string
+    });
+
+    return res.status(201).send({
+      success: true,
+      message: "Product Created Successfully",
+      product,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({
+      success: false,
+      message: "Error in Create Product API",
+      error,
+    });
+  }
+};
+
+
+
+
+
+const ColorSchema = new mongoose.Schema({
+  colorId: { type: String, required: true },
+  colorName: { type: String, required: true },
+  colorCode: { type: String, required: true },
+  images: {
+    type: [String],
+    required: true,
+    validate: v => v.length >= 1,
+  },
+  sizes: [
+    {
+      size: { type: String, required: true },
+      price: { type: Number, required: false },   // Optional: won't break old records
+      stock: { type: Number, required: false },   // Optional: won't break old records
+    }
+  ],
+});
+
+
+productSchema.pre('save', function(next) {
+  try {
+    const totalStock = (this.colors || []).reduce((sum, color) => {
+      const colorStock = (color.sizes || []).reduce((s, sz) => s + (sz.stock || 0), 0);
+      return sum + colorStock;
+    }, 0);
+    if (totalStock > 0) {
+      this.stock = totalStock;  // Only update if stock data exists
+    }
+  } catch (err) {
+    console.log("Stock calculation error:", err.message);
+  }
+  next();
+});
+
+✅ 1. Basic Toast Syntax
+
+
+import Toast from 'react-native-toast-message';
+
+Toast.show({
+  type: 'success',    // success | error | info (default) — or custom type
+  text1: 'Title goes here',
+  text2: 'Message goes here',
+  position: 'top',     // top | bottom
+  visibilityTime: 3000,  // milliseconds
+  autoHide: true,       // default true
+  topOffset: 50,        // distance from top
+  bottomOffset: 40,     // distance from bottom
+  onPress: () => {},    // action when clicked
+});
+✅ 2. Available Built-in Types
+Type	Description	Appearance (Default)
+'success'	Green background	✅ For success messages
+'error'	Red background	❌ For errors
+'info'	Blue background	ℹ️ For general information
+
+✅ 3. Usage Examples for Each Type
+➤ Success Toast:
+
+
+Toast.show({
+  type: 'success',
+  text1: 'Success!',
+  text2: 'Your order has been placed.',
+});
+➤ Error Toast:
+
+
+Toast.show({
+  type: 'error',
+  text1: 'Error',
+  text2: 'Something went wrong.',
+});
+➤ Info Toast:
+
+
+Toast.show({
+  type: 'info',
+  text1: 'Heads up',
+  text2: 'This is just an information message.',
+});
+✅ 4. Customize Position & Duration
+
+
+Toast.show({
+  type: 'success',
+  text1: 'Upload Successful',
+  text2: 'Your images were uploaded successfully.',
+  position: 'bottom',
+  visibilityTime: 5000,   // 5 seconds
+  autoHide: true,
+});
+✅ 5. Add Actions on Toast Press
+
+Toast.show({
+  type: 'info',
+  text1: 'Tap Me!',
+  text2: 'Click here to view details.',
+  onPress: () => navigation.navigate('OrderDetails'),
+});
+✅ 6. Dismissing Toast Manually
+
+
+Toast.hide();
+✅ 7. Custom Toast Types (Advanced)
+👉 Define in your App.js:
+
+
+<Toast
+  config={{
+    customType: ({ text1, text2 }) => (
+      <View style={{ padding: 20, backgroundColor: 'purple', borderRadius: 10 }}>
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>{text1}</Text>
+        <Text style={{ color: 'white' }}>{text2}</Text>
+      </View>
+    ),
+  }}
+/>
+Usage:
+
+Toast.show({
+  type: 'customType',
+  text1: 'Custom',
+  text2: 'This is a custom toast',
+});
