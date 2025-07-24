@@ -8,10 +8,11 @@ import {
   View,
   ActivityIndicator,
   Button,
+  Modal,
+  Animated,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Layout from "../../../components/Layout/Layout";
-// import { UserData } from "../../data/UserData";
 import InputBox from "../../../components/Form/InputBox";
 import { useDispatch, useSelector } from "react-redux";
 import { Picker } from "@react-native-picker/picker";
@@ -21,16 +22,19 @@ import {
   updateProduct,
 } from "../../../redux/features/auth/productActions";
 import { getAllCategories } from "../../../redux/features/auth/categoryActions";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { LinearGradient } from "expo-linear-gradient";
+import DisplayMessage from "../../../components/Message/DisplayMessage";
 
 const UpdateProducts = ({ navigation }) => {
   const dispatch = useDispatch();
-  // const { user } = useSelector((state) => state.user);
-  // console.log(user);
 
   const { categories = "" } = useSelector((state) => state.category);
-  const { products = "", message = "" } = useSelector((state) => state.product);
-  console.log("categories :", categories);
-  console.log("products :", products);
+  const {
+    products = "",
+    message = "",
+    loading: productLoading,
+  } = useSelector((state) => state.product);
 
   useEffect(() => {
     dispatch(getAllCategories());
@@ -47,10 +51,31 @@ const UpdateProducts = ({ navigation }) => {
       setProductId("");
       setCategory("");
       setCategoryId("");
-      alert(message);
+      setSubcategory("");
+      setAvailableSubcategories([]);
+      setSuccessMessage(message);
+      setShowNotification(true);
+
+      // Animate notification entrance
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+
+      // Auto-hide notification after 3 seconds
+      setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowNotification(false);
+        });
+      }, 3000);
+
       dispatch(clearMessage());
     }
-    console.log("message", message);
   }, [message]);
 
   //State
@@ -61,23 +86,45 @@ const UpdateProducts = ({ navigation }) => {
   const [catData, setCatData] = useState([]);
   const [category, setCategory] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const [availableSubcategories, setAvailableSubcategories] = useState([]);
   const [productId, setProductId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showNotification, setShowNotification] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  //Product Create
-  const handleCreate = () => {
+  // Update subcategories when category changes
+  useEffect(() => {
+    if (categoryId) {
+      const selectedCategory = categories.find((cat) => cat._id === categoryId);
+      if (selectedCategory && selectedCategory.subcategories) {
+        setAvailableSubcategories(selectedCategory.subcategories);
+      } else {
+        setAvailableSubcategories([]);
+      }
+    } else {
+      setAvailableSubcategories([]);
+    }
+  }, [categoryId, categories]);
+
+  //Product Update
+  const handleUpdate = () => {
     if (!productId) {
-      return alert("Please fill all fields");
+      return Toast.show({
+        type: "error",
+        text1: "Error !",
+        text2: "Please select a product to update",
+      });
     }
     const formData = {
       name: name,
       description: description,
       price: price,
-      stock: stock,
+      // stock: stock,
       category: categoryId,
+      subcategory: subcategory,
     };
-    console.log("formData :", formData);
-    console.log("productId :", productId);
     dispatch(updateProduct(productId, formData));
   };
 
@@ -91,197 +138,414 @@ const UpdateProducts = ({ navigation }) => {
     setName(getProduct?.name);
     setDescription(getProduct?.description);
     setPrice(getProduct?.price.toString());
-    setStock(getProduct?.stock.toString());
+    // setStock(getProduct?.stock.toString());
     setCategory(getProduct?.category?.category);
     setCategoryId(getProduct?.category?._id);
+    setSubcategory(getProduct?.subcategory || "");
 
-    console.log("getProduct", getProduct);
+    // Update available subcategories based on selected category
+    if (getProduct?.category?._id) {
+      const selectedCategory = categories.find(
+        (cat) => cat._id === getProduct.category._id
+      );
+      if (selectedCategory && selectedCategory.subcategories) {
+        setAvailableSubcategories(selectedCategory.subcategories);
+      } else {
+        setAvailableSubcategories([]);
+      }
+    }
   };
 
   return (
-    <Layout>
-      <View style={styles.container}>
-        <ScrollView>
-          <View style={styles.imageContainer}>
-            <Pressable onPress={() => alert("Profile Dialogbox")}>
-              <Text style={{ color: "red" }}>Update Product</Text>
-            </Pressable>
+    <Layout showBackButton={true}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ backgroundColor: "#f8f9fa" }}
+      >
+        <View style={styles.container}>
+          <View style={styles.headerContainer}>
+            <LinearGradient
+              colors={["#1e3c72", "#2a5298"]}
+              style={styles.headerGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Icon name="pencil-box" size={40} color="#fff" />
+              <Text style={styles.headerText}>Update Product</Text>
+            </LinearGradient>
           </View>
-          {loading && <ActivityIndicator style={{ marginTop: 10 }} />}
-          {message?.includes("Updated") && <Text>{message}</Text>}
 
-          <View style={styles.pickerContainer}>
-            <Text style={styles.label}>Select Product:</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={productId}
-                onValueChange={(itemValue) => {
-                  fetchProducts(itemValue);
-                }}
-                style={styles.picker}
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <View
+                style={[styles.statIconBox, { backgroundColor: "#ebf8ff" }]}
               >
-                <Picker.Item label="-- Select Product --" value="" />
-                {products &&
-                  products?.map((c) => (
-                    <Picker.Item key={c._id} label={c.name} value={c._id} />
-                  ))}
-              </Picker>
+                <Icon name="tag-text" size={24} color="#3182ce" />
+              </View>
+              <View style={styles.statInfo}>
+                <Text style={styles.statValue}>Product Details</Text>
+                <Text style={styles.statLabel}>Update product information</Text>
+              </View>
             </View>
           </View>
 
-          <InputBox
-            value={name}
-            setValue={setName}
-            placeholder={"Enter Product Name"}
-            autoComplete={"name"}
-          />
-
-          <InputBox
-            value={description}
-            setValue={setDescription}
-            placeholder={"Enter Product Description"}
-            autoComplete={"address-line1"}
-          />
-
-          <InputBox
-            value={price}
-            setValue={setPrice}
-            placeholder={"Enter Product Price"}
-            autoComplete={"tel"}
-          />
-
-          <InputBox
-            value={stock}
-            setValue={setStock}
-            placeholder={"Enter Product Stock/Quantity"}
-            autoComplete={"tel"}
-          />
-
-          <View style={styles.pickerContainer}>
-            <Text style={styles.label}>Select Category:</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={categoryId}
-                onValueChange={(itemValue) => setCategoryId(itemValue)}
-                style={styles.picker}
+          {showNotification && (
+            <Animated.View
+              style={[
+                styles.notificationContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [
+                    {
+                      translateY: fadeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-20, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={["#4776E6", "#8E54E9"]}
+                style={styles.notificationGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
               >
-                <Picker.Item label="-- Select Category --" value="" />
-                {categories &&
-                  categories?.map((c) => (
-                    <Picker.Item key={c._id} label={c.category} value={c._id} />
-                  ))}
-              </Picker>
+                <View style={styles.notificationIconWrapper}>
+                  <Icon name="check-decagram" size={28} color="#fff" />
+                </View>
+                <Text style={styles.notificationText}>{successMessage}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    Animated.timing(fadeAnim, {
+                      toValue: 0,
+                      duration: 300,
+                      useNativeDriver: true,
+                    }).start(() => setShowNotification(false));
+                  }}
+                  style={styles.closeButton}
+                >
+                  <Icon name="close-circle" size={20} color="#fff" />
+                </TouchableOpacity>
+              </LinearGradient>
+            </Animated.View>
+          )}
+
+          {loading && (
+            <ActivityIndicator
+              size="large"
+              color="#3b5998"
+              style={styles.loader}
+            />
+          )}
+
+          <View style={styles.cardContainer}>
+            <View style={styles.pickerContainer}>
+              <Text style={styles.label}>
+                <Icon name="shape-outline" size={16} color="#555" /> Select
+                Product:
+              </Text>
+              <View style={styles.pickerWrapper}>
+                <Picker
+                  selectedValue={productId}
+                  onValueChange={(itemValue) => {
+                    fetchProducts(itemValue);
+                  }}
+                  style={styles.picker}
+                  dropdownIconColor="#3b5998"
+                >
+                  <Picker.Item label="-- Select Product --" value="" />
+                  {products &&
+                    products?.map((c) => (
+                      <Picker.Item key={c._id} label={c.name} value={c._id} />
+                    ))}
+                </Picker>
+              </View>
+            </View>
+
+            <InputBox
+              icon="tag-text-outline"
+              value={name}
+              setValue={setName}
+              placeholder={"Enter Product Name"}
+              autoComplete={"name"}
+            />
+
+            <InputBox
+              icon="text-box-outline"
+              value={description}
+              setValue={setDescription}
+              placeholder={"Enter Product Description"}
+              autoComplete={"address-line1"}
+            />
+
+            <InputBox
+              icon="currency-usd"
+              value={price}
+              setValue={setPrice}
+              placeholder={"Enter Product Price"}
+              autoComplete={"tel"}
+            />
+
+            {/* <InputBox
+              icon="package-variant-closed"
+              value={stock}
+              setValue={setStock}
+              placeholder={"Enter Product Stock/Quantity"}
+              autoComplete={"tel"}
+            /> */}
+
+            <View style={styles.pickerContainer}>
+              <Text style={styles.label}>
+                <Icon name="tag-multiple" size={16} color="#555" /> Select
+                Category:
+              </Text>
+              <View style={styles.pickerWrapper}>
+                <Picker
+                  selectedValue={categoryId}
+                  onValueChange={(itemValue) => setCategoryId(itemValue)}
+                  style={styles.picker}
+                  dropdownIconColor="#3b5998"
+                >
+                  <Picker.Item label="-- Select Category --" value="" />
+                  {categories &&
+                    categories?.map((c) => (
+                      <Picker.Item
+                        key={c._id}
+                        label={c.category}
+                        value={c._id}
+                      />
+                    ))}
+                </Picker>
+              </View>
+            </View>
+
+            {availableSubcategories.length > 0 && (
+              <View style={styles.pickerContainer}>
+                <Text style={styles.label}>
+                  <Icon name="folder-multiple" size={16} color="#555" /> Select
+                  Subcategory:
+                </Text>
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={subcategory}
+                    onValueChange={(itemValue) => setSubcategory(itemValue)}
+                    style={styles.picker}
+                    dropdownIconColor="#3b5998"
+                  >
+                    <Picker.Item label="-- Select Subcategory --" value="" />
+                    {availableSubcategories.map((subcat, index) => (
+                      <Picker.Item key={index} label={subcat} value={subcat} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={styles.btnUpdate}
+              onPress={handleUpdate}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={["#1e3c72", "#2a5298"]}
+                style={styles.btnGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Icon name="content-save-edit" size={20} color="#fff" />
+                <Text style={styles.btnUpdateText}>UPDATE PRODUCT</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Product Management v1.0</Text>
             </View>
           </View>
-
-          {/* <InputBox
-            value={description}
-            setValue={setDescription}
-            placeholder={"Enter Product Description"}
-            autoComplete={"address-line1"}
-          />
-
-          <InputBox
-            value={price}
-            setValue={setPrice}
-            placeholder={"Enter Product Price"}
-            autoComplete={"tel"}
-          /> */}
-
-          {/* <InputBox
-            value={password}
-            setValue={setPassword}
-            placeholder={"Enter your Password"}
-            autoComplete={"password"}
-            secureTextEntry={true}
-          /> */}
-
-          {/* <InputBox
-            value={category}
-            setValue={setCategory}
-            placeholder={"Enter Product Category"}
-            autoComplete={"address-line1"}
-          />
-
-          <InputBox
-            value={stock}
-            setValue={setStock}
-            placeholder={"Enter Product Stock/Quantity"}
-            autoComplete={"tel"}
-          />
-
-          <Button title="Pick Image" onPress={pickImage} />
-
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              marginVertical: 10,
-            }}
-          >
-            {images.map((img, i) => (
-              <Image
-                key={i}
-                source={{ uri: img }}
-                style={{ width: 100, height: 100, margin: 5, borderRadius: 10 }}
-              />
-            ))}
-          </View> */}
-
-          <TouchableOpacity style={styles.btnUpdate} onPress={handleCreate}>
-            <Text style={styles.btnUpdateText}>UPDATE PRODUCT</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+        </View>
+      </ScrollView>
     </Layout>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 20,
+    flex: 1,
+    padding: 15,
+    backgroundColor: "#f8f9fa",
   },
-  imageContainer: {
+  headerContainer: {
+    marginBottom: 20,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  headerGradient: {
+    paddingVertical: 25,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  headerText: {
+    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
+  statsContainer: {
+    marginBottom: 20,
+  },
+  statCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  statIconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 15,
   },
-  image: {
-    height: 100,
-    width: "100%",
-    resizeMode: "contain",
+  statInfo: {
+    flex: 1,
   },
-  btnUpdate: {
-    backgroundColor: "#000000",
-    height: 40,
-    borderRadius: 20,
-    marginHorizontal: 30,
-    justifyContent: "center",
-    marginTop: 10,
+  statValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2d3748",
+    marginBottom: 2,
   },
-  btnUpdateText: {
-    color: "#ffffff",
-    fontSize: 18,
-    textAlign: "center",
+  statLabel: {
+    fontSize: 14,
+    color: "#718096",
+  },
+  cardContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 20,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  messageContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e6f7e6",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  successMessage: {
+    color: "green",
+    marginLeft: 10,
+    fontSize: 14,
   },
   pickerContainer: {
-    marginHorizontal: 30,
-    marginBottom: 10,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    marginBottom: 5,
+    marginBottom: 8,
     color: "#555",
+    fontWeight: "500",
+    flexDirection: "row",
+    alignItems: "center",
   },
   pickerWrapper: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
+    borderColor: "#ddd",
+    borderRadius: 10,
     overflow: "hidden",
+    backgroundColor: "#f9f9f9",
   },
-
   picker: {
     height: 50,
     width: "100%",
+  },
+  btnUpdate: {
+    borderRadius: 25,
+    overflow: "hidden",
+    marginTop: 20,
+    marginBottom: 15,
+  },
+  btnGradient: {
+    height: 50,
+    borderRadius: 25,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  btnUpdateText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
+  footer: {
+    marginTop: 15,
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  footerText: {
+    fontSize: 12,
+    color: "#a0aec0",
+    textAlign: "center",
+  },
+  notificationContainer: {
+    marginBottom: 20,
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  notificationGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: "#ffffff",
+  },
+  notificationIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 5,
+  },
+  notificationText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+    marginLeft: 10,
+    flex: 1,
+    textShadowColor: "rgba(0,0,0,0.1)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  closeButton: {
+    padding: 6,
   },
 });
 

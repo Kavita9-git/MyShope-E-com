@@ -16,7 +16,14 @@ const Banner = () => {
     <View key={data.coverImageUri} style={styles.cardContainer}>
       <Pressable onPress={() => alert(data._id)}>
         <View style={styles.cardWrapper}>
-          <Image style={styles.card} source={{ uri: data.coverImageUri }} />
+          <Image
+            style={styles.card}
+            source={{
+              uri: data?.coverImageUri.startsWith("http")
+                ? data?.coverImageUri
+                : `https://nodejsapp-hfpl.onrender.com${data?.coverImageUri}`,
+            }}
+          />
           <View
             style={[
               styles.cornerLabel,
@@ -48,6 +55,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+    marginHorizontal: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
+    overflow: "hidden",
   },
   cardContainer: {
     alignItems: "center",
@@ -55,11 +71,11 @@ const styles = StyleSheet.create({
     width,
   },
   cardWrapper: {
-    // borderRadius: 8,
     overflow: "hidden",
+    borderRadius: 12,
   },
   card: {
-    width: width * 1,
+    width: width - 30,
     height: width * 0.4,
   },
   cornerLabel: {

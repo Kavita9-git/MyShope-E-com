@@ -40,6 +40,7 @@ export const productReducer = createReducer({ token: null }, (builder) => {
     state.isAuth = true;
     state.message = message;
     state.product = product;
+    console.log("updateProductSuccess msg :", message);
   });
   builder.addCase("updateProductFail", (state, action) => {
     state.error = action.payload;

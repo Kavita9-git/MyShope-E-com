@@ -1,6 +1,6 @@
 import {
   Image,
-  ScrollView, // Changed from View to ScrollView
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,7 +13,10 @@ import * as ImagePicker from "expo-image-picker";
 import Layout from "../../components/Layout/Layout";
 import { useDispatch, useSelector } from "react-redux";
 import { uploadProfilePic } from "../../redux/features/auth/userActions";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { LinearGradient } from "expo-linear-gradient";
+import AntDesign from "react-native-vector-icons/AntDesign";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import Feather from "react-native-vector-icons/Feather";
 
 const UploadProfilePic = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -65,51 +68,105 @@ const UploadProfilePic = ({ navigation }) => {
   };
 
   return (
-    <Layout>
-      {/* Use ScrollView to prevent content from overlapping the header */}
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.headerText}>Update Profile Picture</Text>
-
-        {/* Avatar Section */}
-        <View style={styles.avatarContainer}>
-          {image ? (
-            <Image source={{ uri: image }} style={styles.avatar} />
-          ) : (
-            <Icon
-              name="account-circle"
-              size={150}
-              color="#E0E0E0"
-              style={styles.avatar}
-            />
-          )}
-          <TouchableOpacity
-            style={styles.editIconContainer}
-            onPress={pickImage}
+    <Layout showBackButton={true}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={["#1e3c72", "#2a5298"]}
+            style={styles.headerGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
           >
-            <Icon name="camera-plus" size={25} color="#ffffff" />
+            <View style={styles.profileHeader}>
+              <View style={styles.iconContainer}>
+                <AntDesign name="upload" size={40} color="#fff" />
+              </View>
+              <Text style={styles.headerTitle}>Profile Picture</Text>
+              <Text style={styles.headerSubtitle}>
+                Change your profile image
+              </Text>
+            </View>
+          </LinearGradient>
+        </View>
+
+        <View style={styles.contentContainer}>
+          <View style={styles.avatarContainer}>
+            {image ? (
+              <Image
+                source={{
+                  uri: image?.startsWith("http")
+                    ? image
+                    : `https://nodejsapp-hfpl.onrender.com${image}`,
+                }}
+                style={styles.avatar}
+              />
+            ) : (
+              <AntDesign
+                name="user"
+                size={80}
+                color="#E0E0E0"
+                style={styles.avatarPlaceholder}
+              />
+            )}
+            <TouchableOpacity
+              style={styles.editIconContainer}
+              onPress={pickImage}
+            >
+              <AntDesign name="camerao" size={22} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.instructionText}>
+            Tap the camera icon to select a new profile picture
+          </Text>
+
+          <TouchableOpacity
+            onPress={handleUpload}
+            disabled={loading}
+            style={styles.buttonContainer}
+          >
+            <LinearGradient
+              colors={["#1e3c72", "#2a5298"]}
+              style={styles.btnUpdate}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <>
+                  <AntDesign name="upload" size={20} color="#ffffff" />
+                  <Text style={styles.btnUpdateText}>Upload Picture</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("account")}
+            style={styles.skipButton}
+          >
+            <Text style={styles.skipText}>Skip For Now</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Upload Button */}
-        <TouchableOpacity
-          style={styles.btnUpdate}
-          onPress={handleUpload}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <>
-              <Icon name="upload" size={22} color="#ffffff" />
-              <Text style={styles.btnUpdateText}>Upload Picture</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        <View style={styles.tipsCard}>
+          <View style={styles.tipHeader}>
+            <Feather name="info" size={20} color="#3182ce" />
+            <Text style={styles.tipTitle}>Profile Picture Tips</Text>
+          </View>
+          <Text style={styles.tipText}>• Use a clear, well-lit photo</Text>
+          <Text style={styles.tipText}>• Center your face in the frame</Text>
+          <Text style={styles.tipText}>• Choose a neutral background</Text>
+          <Text style={styles.tipText}>• Avoid using filters</Text>
+        </View>
 
-        {/* Skip Button */}
-        <TouchableOpacity onPress={() => navigation.navigate("account")}>
-          <Text style={styles.skipText}>Skip For Now</Text>
-        </TouchableOpacity>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Profile Management v1.0</Text>
+        </View>
       </ScrollView>
     </Layout>
   );
@@ -117,19 +174,48 @@ const UploadProfilePic = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    // Use flexGrow to allow the container to expand and center content correctly
-    flexGrow: 1,
+    backgroundColor: "#f8f9fa",
+    minHeight: "100%",
+  },
+  headerContainer: {
+    marginBottom: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    overflow: "hidden",
+  },
+  headerGradient: {
+    paddingTop: 30,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+  },
+  profileHeader: {
+    alignItems: "center",
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 20, // Added vertical padding
-    paddingHorizontal: 20,
-    backgroundColor: "#f5f5f5",
+    marginBottom: 16,
   },
-  headerText: {
+  headerTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 40,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 4,
+  },
+  contentContainer: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   avatarContainer: {
     width: 150,
@@ -137,7 +223,7 @@ const styles = StyleSheet.create({
     borderRadius: 75,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 40,
+    marginVertical: 20,
     position: "relative",
     backgroundColor: "#ffffff",
     elevation: 10,
@@ -145,17 +231,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.15,
     shadowRadius: 5,
+    borderWidth: 3,
+    borderColor: "rgba(255, 255, 255, 0.8)",
   },
   avatar: {
     width: "100%",
     height: "100%",
     borderRadius: 75,
   },
+  avatarPlaceholder: {
+    opacity: 0.5,
+  },
   editIconContainer: {
     position: "absolute",
     bottom: 5,
     right: 5,
-    backgroundColor: "#007BFF",
+    backgroundColor: "#2a5298",
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -165,32 +256,71 @@ const styles = StyleSheet.create({
     borderColor: "#ffffff",
     elevation: 5,
   },
+  instructionText: {
+    fontSize: 16,
+    color: "#718096",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  buttonContainer: {
+    width: "100%",
+    marginTop: 10,
+  },
   btnUpdate: {
-    backgroundColor: "#007BFF",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    width: "80%",
     height: 50,
     borderRadius: 25,
-    marginVertical: 20,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    marginVertical: 10,
   },
   btnUpdateText: {
     color: "#ffffff",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     marginLeft: 10,
   },
+  skipButton: {
+    marginTop: 15,
+    padding: 10,
+  },
   skipText: {
-    marginTop: 20,
-    color: "#007BFF",
+    color: "#718096",
     fontSize: 16,
     fontWeight: "500",
+  },
+  tipsCard: {
+    marginHorizontal: 15,
+    backgroundColor: "#ebf8ff",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  tipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  tipTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#3182ce",
+    marginLeft: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    color: "#4a5568",
+    marginBottom: 6,
+    paddingLeft: 10,
+  },
+  footer: {
+    marginTop: 20,
+    marginBottom: 30,
+    alignItems: "center",
+  },
+  footerText: {
+    color: "#a0aec0",
+    fontSize: 12,
   },
 });
 

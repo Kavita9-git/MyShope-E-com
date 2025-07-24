@@ -274,7 +274,15 @@ const CreateProduct = ({ navigation }) => {
 
           <View style={styles.imagePreview}>
             {images?.map((img, idx) => (
-              <Image key={idx} source={{ uri: img }} style={styles.imageBox} />
+              <Image
+                key={idx}
+                source={{
+                  uri: img?.startsWith("http")
+                    ? img
+                    : `https://nodejsapp-hfpl.onrender.com${img}`,
+                }}
+                style={styles.imageBox}
+              />
             ))}
           </View>
 
@@ -352,7 +360,11 @@ const CreateProduct = ({ navigation }) => {
                 {color?.images.map((img, i) => (
                   <View key={i} style={{ margin: 5, alignItems: "center" }}>
                     <Image
-                      source={{ uri: img }}
+                      source={{
+                        uri: img?.startsWith("http")
+                          ? img
+                          : `https://nodejsapp-hfpl.onrender.com${img}`,
+                      }}
                       style={{ width: 70, height: 70, borderRadius: 8 }}
                     />
                     <TouchableOpacity

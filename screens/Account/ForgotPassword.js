@@ -17,6 +17,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { forgotPassword } from "../../redux/features/auth/userActions";
 import { server } from "../../redux/store"; // Your backend server URL
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // For icons
+import Toast from "react-native-toast-message";
+import BackButton from "../../components/Layout/BackButton";
 
 const ForgotPassword = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -33,7 +35,9 @@ const ForgotPassword = ({ navigation }) => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState(""); // Added for confirmation
   const [otpRequestLoading, setOtpRequestLoading] = useState(false); // Loading for OTP request specifically
-
+  const [resetPasswordRequestLoading, setResetPasswordRequestLoading] =
+    useState(false);
+  const [disableEmail, setDisableEmail] = useState(true);
   // Set initial email from user data if available (though for forgot password, it's usually entered manually)
   useEffect(() => {
     if (user && user.email) {
@@ -41,47 +45,79 @@ const ForgotPassword = ({ navigation }) => {
     }
   }, [user]);
 
-  // Handle feedback from redux action (for actual password reset)
-  useEffect(() => {
-    if (reduxError) {
-      Alert.alert("Error", reduxError);
-    }
-    if (!reduxLoading && !reduxError && otp && newPassword) {
-      // Check if update was successful and inputs were not empty before dispatch
-      Alert.alert(
-        "Success",
-        "Password reset successfully! Please login with your new password."
-      );
-      setOtp("");
-      setNewPassword("");
-      setConfirmNewPassword("");
-      // Optionally navigate to login screen after success
-      navigation.navigate("login"); // Assuming you have a 'login' route
-    }
-  }, [reduxLoading, reduxError]); // Depend on loading and error states from Redux
-
-  const handlePasswordUpdate = () => {
-    if (!otp || !newPassword || !confirmNewPassword) {
-      Alert.alert("Error", "Please fill in all fields.");
+  const handlePasswordUpdate = async () => {
+    if (!otp || !newPassword || !confirmNewPassword || !email) {
+      Toast.show({
+        type: "error",
+        text1: "Error !",
+        text1: "Please fill in all fields.",
+        position: "top",
+      });
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      Alert.alert("Error", "New passwords do not match.");
+      Toast.show({
+        type: "error",
+        text1: "Error !",
+        text1: "New passwords do not match.",
+        position: "top",
+      });
       return;
     }
 
     const formData = {
       otp,
       newPassword,
+      email,
     };
-    dispatch(forgotPassword(formData));
+    try {
+      setResetPasswordRequestLoading(true);
+      const { data } = await axios.post(`${server}/user/verify-otp`, formData);
+      if (data?.success) {
+        Toast.show({
+          type: "success",
+          text1: "Success !",
+          text1: data.message,
+          position: "top",
+        });
+        setResetPasswordRequestLoading(false);
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Error !",
+          text1: data.message,
+          position: "top",
+        });
+      }
+    } catch (error) {
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.log("Error response:", error.response.data);
+        return error.response.data;
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.log("Error request:", error.request);
+        return { success: false, message: "No response from server" };
+      } else {
+        // Something happened in setting up the request
+        console.log("Error:", error.message);
+        return { success: false, message: error.message };
+      }
+    }
+    // dispatch(forgotPassword(formData));
   };
 
   const handleGetOtp = async () => {
     try {
       if (!email) {
-        Alert.alert("Error", "Please enter your email address.");
+        Toast.show({
+          type: "error",
+          text1: "Error !",
+          text1: "Please enter your email address.",
+          position: "top",
+        });
         return;
       }
 
@@ -90,30 +126,43 @@ const ForgotPassword = ({ navigation }) => {
       // If this screen is specifically for a logged-in user who forgot their password,
       // then comparing with `user.email` makes sense. Assuming it's for anyone for now.
       // If `email != user.email` check is truly desired, ensure `user` is available and handled correctly.
-
+      setDisableEmail(false);
       setOtpRequestLoading(true); // Start loading for OTP request
       const { data } = await axios.post(`${server}/user/request-otp`, {
         email,
       });
-
       if (data.success) {
-        Alert.alert("Success", data.message);
+        Toast.show({
+          type: "success",
+          text1: "Success !",
+          text1: data.message,
+          position: "top",
+        });
       } else {
-        Alert.alert(
-          "Error",
-          data.message || "Failed to send OTP. Please try again."
-        );
+        Toast.show({
+          type: "error",
+          text1: "Error !",
+          text1: data.message || "Failed to send OTP. Please try again.",
+          position: "top",
+        });
       }
     } catch (err) {
       console.error("API error:", err);
       // More specific error handling if err.response exists
       if (err.response && err.response.data && err.response.data.message) {
-        Alert.alert("Error", err.response.data.message);
+        Toast.show({
+          type: "error",
+          text1: "Error !",
+          text1: err?.response?.data?.message,
+          position: "top",
+        });
       } else {
-        Alert.alert(
-          "Error",
-          "An unexpected error occurred. Please try again later."
-        );
+        Toast.show({
+          type: "error",
+          text1: "Error !",
+          text1: "An unexpected error occurred. Please try again later.",
+          position: "top",
+        });
       }
     } finally {
       setOtpRequestLoading(false); // Stop loading regardless of success or failure
@@ -121,7 +170,8 @@ const ForgotPassword = ({ navigation }) => {
   };
 
   return (
-    <Layout>
+    <View>
+      <BackButton />
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.container}>
           <View style={styles.headerContainer}>
@@ -141,6 +191,7 @@ const ForgotPassword = ({ navigation }) => {
               placeholder={"Enter your Email Id"}
               keyboardType={"email-address"} // Better keyboard for email
               autoComplete={"email"}
+              disabled={disableEmail}
               // editable={user && user.email ? false : true} // Make editable based on user state
             />
 
@@ -189,17 +240,18 @@ const ForgotPassword = ({ navigation }) => {
           <TouchableOpacity
             style={[styles.btnAction, styles.updatePasswordButton]}
             onPress={handlePasswordUpdate}
-            disabled={reduxLoading} // Disable while password update is loading
+            disabled={resetPasswordRequestLoading} // Disable while password update is loading
           >
-            {reduxLoading ? (
+            {resetPasswordRequestLoading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
               <Text style={styles.btnActionText}>RESET PASSWORD</Text>
             )}
+            {/* <Text style={styles.btnActionText}>RESET PASSWORD</Text> */}
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </Layout>
+    </View>
   );
 };
 

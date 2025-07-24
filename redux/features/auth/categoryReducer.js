@@ -35,10 +35,20 @@ export const categoryReducer = createReducer({ token: null }, (builder) => {
     state.loading = true;
   });
   builder.addCase("updateCategorySuccess", (state, action) => {
-    const { message } = action.payload;
+    const { message, category } = action.payload;
     state.loading = false;
     state.isAuth = true;
     state.message = message;
+    // Update the category in the categories array if it exists
+    if (category && state.categories) {
+      const index = state.categories.findIndex(
+        (cat) => cat._id === category._id
+      );
+      if (index !== -1) {
+        state.categories[index] = category;
+      }
+    }
+    console.log("updateCategorySuccess payload:", action.payload);
   });
   builder.addCase("updateCategoryFail", (state, action) => {
     state.error = action.payload;

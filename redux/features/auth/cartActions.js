@@ -1,24 +1,25 @@
 import { server } from "../../store";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axiosInstance from "../../../utils/axiosConfig";
 
 export const addToCart = (item) => async (dispatch) => {
   try {
     dispatch({ type: "addToCartRequest" });
-
-    const { data } = await axios.post(`${server}/cart/add`, item, {
+    console.log("Adding item to cart:", item);
+    const { data } = await axiosInstance.post(`/cart/add`, item, {
       headers: {
         "Content-Type": "application/json",
       },
     });
 
-    dispatch({
+    return dispatch({
       type: "addToCartSuccess",
       payload: data?.cart?.items,
     });
   } catch (error) {
     console.log(error);
-    dispatch({
+    return dispatch({
       type: "addToCartFail",
       payload: error.response?.data?.message || "Failed to add to cart",
     });
@@ -30,16 +31,14 @@ export const getCart = () => async (dispatch) => {
   try {
     dispatch({ type: "getCartRequest" });
 
-    const token = await AsyncStorage.getItem("token");
+    const { data } = await axiosInstance.get(`/cart`);
 
-    const { data } = await axios.get(`${server}/cart`);
-
-    dispatch({
+    return dispatch({
       type: "getCartSuccess",
-      payload: data.cart.items,
+      payload: data?.cart?.items,
     });
   } catch (error) {
-    dispatch({
+    return dispatch({
       type: "getCartFail",
       payload: error.response?.data?.message || "Failed to fetch cart",
     });
@@ -50,15 +49,15 @@ export const increaseQty = (productId) => async (dispatch) => {
   try {
     dispatch({ type: "increaseQtyRequest" });
 
-    const { data } = await axios.put(`${server}/cart/increase/${productId}`);
+    const { data } = await axiosInstance.put(`/cart/increase/${productId}`);
 
     dispatch({
       type: "increaseQtySuccess",
       payload: data.cart.items,
     });
-    dispatch(getCart());
+    return dispatch(getCart());
   } catch (error) {
-    dispatch({
+    return dispatch({
       type: "increaseQtyFail",
       payload: error.response?.data?.message || "Failed to increase quantity",
     });
@@ -69,15 +68,15 @@ export const decreaseQty = (productId) => async (dispatch) => {
   try {
     dispatch({ type: "decreaseQtyRequest" });
 
-    const { data } = await axios.put(`${server}/cart/decrease/${productId}`);
+    const { data } = await axiosInstance.put(`/cart/decrease/${productId}`);
 
     dispatch({
       type: "decreaseQtySuccess",
       payload: data.cart.items,
     });
-    dispatch(getCart());
+    return dispatch(getCart());
   } catch (error) {
-    dispatch({
+    return dispatch({
       type: "decreaseQtyFail",
       payload: error.response?.data?.message || "Failed to decrease quantity",
     });
@@ -85,22 +84,59 @@ export const decreaseQty = (productId) => async (dispatch) => {
 };
 
 // ➤ Remove Item from Cart (server + redux)
-export const removeFromCart = (productId) => async (dispatch) => {
+export const removeFromCart = (item) => async (dispatch) => {
+  // Create a promise that we'll resolve when the action is complete
+  let actionComplete;
+  const completionPromise = new Promise((resolve) => {
+    actionComplete = resolve;
+  });
+
   try {
     dispatch({ type: "removeFromCartRequest" });
 
-    const { data } = await axios.delete(`${server}/cart/remove/${productId}`);
+    console.log("Removing item from cart:", item);
 
+    // Extract the productId from the item
+    const productId =
+      typeof item === "object" ? item.productId || item._id : item;
+
+    if (!productId) {
+      throw new Error("Invalid product ID");
+    }
+
+    // Use the correct API endpoint
+    const { data } = await axiosInstance.delete(`/cart/remove/${productId}`);
+
+    console.log("Item removed from cart successfully, stock restored");
+
+    // Dispatch the success action and get updated cart
     dispatch({
       type: "removeFromCartSuccess",
       payload: data.cart.items,
     });
+
+    // Make sure to get updated cart
+    dispatch(getCart());
+
+    // Add a small delay before resolving to ensure UI state is consistent
+    setTimeout(() => {
+      actionComplete();
+    }, 300);
   } catch (error) {
+    console.log("Error removing item from cart:", error);
     dispatch({
       type: "removeFromCartFail",
       payload: error.response?.data?.message || "Failed to remove from cart",
     });
+
+    // Even on error, resolve the promise so UI can update
+    setTimeout(() => {
+      actionComplete();
+    }, 300);
   }
+
+  // Return the promise for chaining in the component
+  return completionPromise;
 };
 
 // ➤ Clear Cart (server + redux)
@@ -108,13 +144,11 @@ export const clearCart = () => async (dispatch) => {
   try {
     dispatch({ type: "clearCartRequest" });
 
-    const token = await AsyncStorage.getItem("token");
+    await axiosInstance.delete(`/cart/clear`);
 
-    await axios.delete(`${server}/cart/clear`);
-
-    dispatch({ type: "clearCartSuccess" });
+    return dispatch({ type: "clearCartSuccess" });
   } catch (error) {
-    dispatch({
+    return dispatch({
       type: "clearCartFail",
       payload: error.response?.data?.message || "Failed to clear cart",
     });
@@ -128,13 +162,13 @@ export const adjustPreCartQty = (productId, type) => (dispatch, getState) => {
 
   if (type === "increase") {
     const newQty = currentQty + 1;
-    dispatch({
+    return dispatch({
       type: "setProductQtyBeforeAdd",
       payload: { productId, quantity: newQty },
     });
   } else if (type === "decrease" && currentQty > 1) {
     const newQty = currentQty - 1;
-    dispatch({
+    return dispatch({
       type: "setProductQtyBeforeAdd",
       payload: { productId, quantity: newQty },
     });
@@ -142,16 +176,16 @@ export const adjustPreCartQty = (productId, type) => (dispatch, getState) => {
 };
 
 export const setCartFromServer = (cartItems) => (dispatch) => {
-  dispatch({
+  return dispatch({
     type: "setCartFromServer",
     payload: cartItems,
   });
 };
 
 export const clearMessage = () => (dispatch) => {
-  dispatch({ type: "clearMessage" });
+  return dispatch({ type: "clearMessage" });
 };
 
 export const clearError = () => (dispatch) => {
-  dispatch({ type: "clearError" });
+  return dispatch({ type: "clearError" });
 };

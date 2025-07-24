@@ -9,6 +9,7 @@ const InputBox = ({
   autoComplete = "on",
   placeholder,
   secureTextEntry,
+  editable = true,
 }) => {
   return (
     <View style={styles.inputContainer}>
@@ -24,6 +25,7 @@ const InputBox = ({
         secureTextEntry={secureTextEntry}
         value={value}
         onChangeText={(text) => setValue(text)}
+        editable={editable}
       />
     </View>
   );

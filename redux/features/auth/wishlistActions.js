@@ -2,6 +2,7 @@ import { server } from "../../../redux/store";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { addToCart } from "./cartActions";
+import axiosInstance from "../../../utils/axiosConfig";
 
 // Add to Wishlist
 export const addToWishlist = (item) => async (dispatch) => {
@@ -9,19 +10,17 @@ export const addToWishlist = (item) => async (dispatch) => {
     dispatch({ type: "addToWishlistRequest" });
 
     // Send request to server to add item to wishlist
-    const response = await axios.post(`${server}/wishlist/add-item`, item, {
-      withCredentials: true,
-    });
+    const response = await axiosInstance.post(`/wishlist/add-item`, item);
 
     if (response.data.success) {
-      dispatch({
+      return dispatch({
         type: "addToWishlistSuccess",
         payload: response.data.wishlist.items,
       });
     }
   } catch (error) {
     console.log(error);
-    dispatch({
+    return dispatch({
       type: "addToWishlistFail",
       payload: error.response?.data?.message || "Failed to add to wishlist",
     });
@@ -34,18 +33,16 @@ export const getWishlist = () => async (dispatch) => {
     dispatch({ type: "getWishlistRequest" });
 
     // Get wishlist from server
-    const response = await axios.get(`${server}/wishlist`, {
-      withCredentials: true,
-    });
+    const response = await axiosInstance.get(`/wishlist`);
 
     if (response.data.success) {
-      dispatch({
+      return dispatch({
         type: "getWishlistSuccess",
         payload: response.data.wishlist.items || [],
       });
     }
   } catch (error) {
-    dispatch({
+    return dispatch({
       type: "getWishlistFail",
       payload: error.response?.data?.message || "Failed to fetch wishlist",
     });
@@ -53,65 +50,79 @@ export const getWishlist = () => async (dispatch) => {
 };
 
 // Remove from Wishlist
-export const removeFromWishlist =
-  (productId, size = null, color = null) =>
-  async (dispatch) => {
-    try {
-      dispatch({ type: "removeFromWishlistRequest" });
+export const removeFromWishlist = (item) => async (dispatch) => {
+  try {
+    dispatch({ type: "removeFromWishlistRequest" });
 
-      // Build query params for size and color if they exist
-      let queryParams = "";
-      if (size && color) {
-        queryParams = `?size=${size}&color=${color}`;
+    // console.log("Removing item from wishlist:", item);
+    const productId = item?.productId?._id || item?.productId;
+
+    if (!productId) {
+      throw new Error("Product ID not found in item");
+    }
+
+    // For DELETE requests with body data in Axios
+    const response = await axiosInstance.delete(
+      `/wishlist/remove-item/${productId}`,
+      {
+        data: {
+          size: item?.size || null,
+          color: item?.color || null,
+        },
       }
+    );
 
-      // Remove item from wishlist on server
-      const response = await axios.delete(
-        `${server}/wishlist/remove-item/${productId}${queryParams}`,
-        { withCredentials: true }
-      );
-
-      if (response.data.success) {
-        dispatch({
-          type: "removeFromWishlistSuccess",
-          payload: response.data.wishlist.items,
-        });
-      }
-    } catch (error) {
-      dispatch({
-        type: "removeFromWishlistFail",
-        payload:
-          error.response?.data?.message || "Failed to remove from wishlist",
+    if (response.data.success) {
+      return dispatch({
+        type: "removeFromWishlistSuccess",
+        payload: response.data.wishlist.items,
       });
     }
-  };
+  } catch (error) {
+    console.log("Error removing from wishlist:", error);
+    return dispatch({
+      type: "removeFromWishlistFail",
+      payload:
+        error.response?.data?.message || "Failed to remove from wishlist",
+    });
+  }
+};
 
 // Move to Cart
 export const moveToCart = (item) => async (dispatch) => {
   try {
     dispatch({ type: "moveToCartRequest" });
 
-    // Build query params for size and color if they exist
-    let queryParams = "";
-    if (item.size && item.color) {
-      queryParams = `?size=${item.size}&color=${item.color}`;
+    const productId = item?.productId?._id || item?.productId;
+
+    if (!productId) {
+      throw new Error("Product ID not found in item");
     }
 
+    // console.log("Moving to cart:", {
+    //   productId,
+    //   size: item?.size || null,
+    //   color: item?.color || null,
+    // });
+
     // Send request to move item from wishlist to cart
-    const response = await axios.post(
-      `${server}/wishlist/move-to-cart/${item.productId}${queryParams}`,
-      {},
-      { withCredentials: true }
+    const response = await axiosInstance.post(
+      `/wishlist/move-to-cart/${productId}`,
+      {
+        size: item?.size || null,
+        color: item?.color || null,
+      }
     );
 
     if (response.data.success) {
-      dispatch({
+      return dispatch({
         type: "moveToCartSuccess",
         payload: response.data.wishlist.items,
       });
     }
   } catch (error) {
-    dispatch({
+    console.log("Error moving to cart:", error);
+    return dispatch({
       type: "moveToCartFail",
       payload: error.response?.data?.message || "Failed to move to cart",
     });
@@ -120,9 +131,9 @@ export const moveToCart = (item) => async (dispatch) => {
 
 // Clear messages and errors
 export const clearWishlistMessage = () => (dispatch) => {
-  dispatch({ type: "clearWishlistMessage" });
+  return dispatch({ type: "clearWishlistMessage" });
 };
 
 export const clearWishlistError = () => (dispatch) => {
-  dispatch({ type: "clearWishlistError" });
+  return dispatch({ type: "clearWishlistError" });
 };

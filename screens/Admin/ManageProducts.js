@@ -1,119 +1,326 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import React from "react";
-import Layout from "../../components/Layout/Layout";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+  Image,
+} from "react-native";
 import AntDesign from "react-native-vector-icons/AntDesign";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useNavigation } from "@react-navigation/native";
+import { useSelector, useDispatch } from "react-redux";
+import { getAllProducts } from "../../redux/features/auth/productActions";
+import { getAllCategories } from "../../redux/features/auth/categoryActions";
+import { Picker } from "@react-native-picker/picker";
+import withBackButton from "../../components/Layout/withBackButton";
 
-const ManageProducts = ({ navigation }) => {
+const ManageProducts = () => {
+  const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const { products, loading } = useSelector((state) => state.product);
+  const { categories } = useSelector((state) => state.category);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
+  const [filteredProducts, setFilteredProducts] = useState([]);
+
+  console.log("products :", products);
+
+  useEffect(() => {
+    dispatch(getAllProducts());
+    dispatch(getAllCategories());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (products && products.length > 0) {
+      if (selectedCategoryId === "all") {
+        setFilteredProducts(products);
+      } else {
+        const filtered = products.filter(
+          (product) =>
+            product.category && product.category._id === selectedCategoryId
+        );
+        setFilteredProducts(filtered);
+      }
+    } else {
+      setFilteredProducts([]);
+    }
+  }, [selectedCategoryId, products]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    dispatch(getAllProducts());
+    dispatch(getAllCategories());
+    setRefreshing(false);
+  };
+
   return (
-    <Layout>
-      <View style={styles.main}>
-        <Text style={styles.heading}>MANAGE PRODUCTS</Text>
-        <View style={styles.btnContainer}>
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("createproducts")}
+    <View style={styles.container}>
+      <Text style={styles.heading}>Manage Products</Text>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate("createproduct")}
+        >
+          <AntDesign name="plus" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Add Product</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.imageManageButton}
+          onPress={() => navigation.navigate("deleteimageproduct")}
+        >
+          <AntDesign name="picture" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Manage Images</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.filterContainer}>
+        <View style={styles.filterIconContainer}>
+          <MaterialIcons name="filter-list" size={22} color="#666" />
+          <Text style={styles.filterLabel}>Filter by Category:</Text>
+        </View>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={selectedCategoryId}
+            onValueChange={(itemValue) => setSelectedCategoryId(itemValue)}
+            style={styles.picker}
+            dropdownIconColor="#333"
           >
-            <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Create Products</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("updateproducts")}
-          >
-            <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Update Products</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("updateimageproducts")}
-          >
-            <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Update Image Products</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("deleteimageproducts")}
-          >
-            <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Delete Image Products</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("deleteproducts")}
-          >
-            <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Delete Products</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("createproductsreviewcomment")}
-          >
-            <AntDesign style={styles.icon} name="edit" />
-            <Text style={styles.btnText}>Review Products</Text>
-          </TouchableOpacity>
-
-          {/* 
-
-          <TouchableOpacity style={styles.btn}>
-            <AntDesign style={styles.icon} name="user" />
-            <Text style={styles.btnText}>Manage Users</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.btn}>
-            <AntDesign style={styles.icon} name="bars" />
-            <Text style={styles.btnText}>Manage Orders</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.btn}>
-            <AntDesign style={styles.icon} name="info" />
-            <Text style={styles.btnText}>About App</Text>
-          </TouchableOpacity> */}
+            <Picker.Item label="All Products" value="all" />
+            {categories &&
+              categories.map((category) => (
+                <Picker.Item
+                  key={category._id}
+                  label={category.category}
+                  value={category._id}
+                />
+              ))}
+          </Picker>
         </View>
       </View>
-    </Layout>
+
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+        style={styles.scrollView}
+      >
+        {loading ? (
+          <Text style={styles.loadingText}>Loading products...</Text>
+        ) : filteredProducts && filteredProducts.length > 0 ? (
+          filteredProducts.map((product) => (
+            <View key={product._id} style={styles.productCard}>
+              <Image
+                source={{
+                  uri: product?.images[0]?.url?.startsWith("http")
+                    ? product?.images[0]?.url
+                    : `https://nodejsapp-hfpl.onrender.com${product?.images[0]?.url}`,
+                }}
+                style={styles.productImage}
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName} numberOfLines={1}>
+                  {product.name}
+                </Text>
+                <Text style={styles.productPrice}>
+                  ${product.price.toFixed(2)}
+                </Text>
+                <Text
+                  style={[
+                    styles.stockStatus,
+                    product.stock > 0 ? styles.inStock : styles.outOfStock,
+                  ]}
+                >
+                  {product.stock > 0
+                    ? `In Stock (${product.stock})`
+                    : "Out of Stock"}
+                </Text>
+              </View>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.editButton]}
+                  onPress={() =>
+                    navigation.navigate("updateproduct", { id: product._id })
+                  }
+                >
+                  <AntDesign name="edit" size={18} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.imageButton]}
+                  onPress={() =>
+                    navigation.navigate("updateimageproducts", {
+                      id: product._id,
+                    })
+                  }
+                >
+                  <AntDesign name="picture" size={18} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.deleteButton]}
+                  onPress={() =>
+                    navigation.navigate("deleteproduct", { id: product._id })
+                  }
+                >
+                  <AntDesign name="delete" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.noProductsText}>No products found.</Text>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  main: {
-    backgroundColor: "lightgray",
-    height: "96%",
+  container: {
+    flex: 1,
+    padding: 15,
+    backgroundColor: "#f5f5f5",
   },
   heading: {
-    backgroundColor: "#000000",
-    color: "#ffffff",
-    textAlign: "center",
-    padding: 10,
-    fontSize: 20,
-    margin: 10,
-    borderRadius: 5,
+    fontSize: 22,
     fontWeight: "bold",
+    marginVertical: 15,
+    textAlign: "center",
+    color: "#333",
   },
-  btnContainer: {
-    margin: 10,
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 15,
   },
-  btn: {
+  addButton: {
+    flexDirection: "row",
+    backgroundColor: "#4CAF50",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  imageManageButton: {
+    flexDirection: "row",
+    backgroundColor: "#9b59b6",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    marginLeft: 5,
+  },
+  filterContainer: {
+    marginBottom: 15,
+  },
+  filterIconContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 10,
-    elevation: 10,
-    marginBottom: 20,
+    marginBottom: 8,
   },
-  icon: {
-    fontSize: 25,
-    marginRight: 10,
-    marginLeft: 10,
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+    marginLeft: 8,
   },
-  btnText: {
-    fontSize: 18,
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  picker: {
+    height: 50,
+    width: "100%",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  loadingText: {
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 16,
+    color: "#666",
+  },
+  noProductsText: {
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 16,
+    color: "#666",
+  },
+  productCard: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    flexDirection: "row",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  productImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    marginRight: 15,
+  },
+  productInfo: {
+    flex: 1,
+    justifyContent: "space-around",
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  productPrice: {
+    fontSize: 14,
+    color: "#2c3e50",
+    marginVertical: 5,
+  },
+  stockStatus: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  inStock: {
+    color: "#27ae60",
+  },
+  outOfStock: {
+    color: "#e74c3c",
+  },
+  actionButtons: {
+    justifyContent: "space-around",
+    paddingLeft: 10,
+  },
+  actionButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 2,
+  },
+  editButton: {
+    backgroundColor: "#3498db",
+  },
+  imageButton: {
+    backgroundColor: "#9b59b6",
+  },
+  deleteButton: {
+    backgroundColor: "#e74c3c",
   },
 });
 
-export default ManageProducts;
+// Export the component wrapped with the withBackButton HOC
+export default withBackButton(ManageProducts);

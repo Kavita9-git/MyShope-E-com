@@ -1,25 +1,34 @@
 import { server } from "../../store";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axiosInstance from "../../../utils/axiosConfig";
 
-//GET ALL ORDERS ACTION
+//GET ALL PRODUCTS ACTION
 export const getAllProducts = () => async (dispatch) => {
   try {
     dispatch({
       type: "getAllProductsRequest",
     });
-    //HITTING NODE GET ALL ORDERS API REQUEST
-    const { data } = await axios.get(`${server}/product/get-all`);
-    dispatch({
-      type: "getAllProductsSuccess",
-      payload: {
-        message: data?.message,
-        products: data?.products,
-      },
-    });
+    // console.log("getAllProducts - fetching from:", `${server}/product/get-all`);
+
+    //HITTING NODE GET ALL PRODUCTS API REQUEST
+    const { data } = await axiosInstance.get(`/product/get-all`);
+    // console.log("getAllProducts response:", data);
+
+    if (data && data.products) {
+      return dispatch({
+        type: "getAllProductsSuccess",
+        payload: {
+          message: data.message || "Products fetched successfully",
+          products: data.products,
+        },
+      });
+    } else {
+      throw new Error("Invalid response format from API");
+    }
   } catch (error) {
-    console.log(error);
-    dispatch({
+    console.log("getAllProducts error:", error);
+    return dispatch({
       type: "getAllProductsFail",
       payload: error.response?.data?.message || error.message,
     });
@@ -33,19 +42,20 @@ export const createProduct = (formData) => async (dispatch) => {
       type: "createProductRequest",
     });
     //HITTING NODE CREATE ORDER API REQUEST
-    const { data } = await axios.post(`${server}/product/create`, formData, {
+    const { data } = await axiosInstance.post(`/product/create`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
     // console.log("data create Product", data);
-    dispatch({
+
+    return dispatch({
       type: "createProductSuccess",
       payload: data,
     });
   } catch (error) {
     console.log("data create Product error", error.response?.data);
-    dispatch({
+    return dispatch({
       type: "createProductFail",
       payload: error.response?.data?.message || error.message,
     });
@@ -59,8 +69,8 @@ export const updateProduct = (productId, formData) => async (dispatch) => {
       type: "updateProductRequest",
     });
     //HITTING NODE UPDATE ORDER API REQUEST
-    const { data } = await axios.put(
-      `${server}/product/${productId}`,
+    const { data } = await axiosInstance.put(
+      `/product/${productId}`,
       formData,
       {
         headers: {
@@ -68,13 +78,13 @@ export const updateProduct = (productId, formData) => async (dispatch) => {
         },
       }
     );
-    dispatch({
+    return dispatch({
       type: "updateProductSuccess",
       payload: data,
     });
   } catch (error) {
     console.log(error);
-    dispatch({
+    return dispatch({
       type: "updateProductFail",
       payload: error.response?.data?.message || error.message,
     });
@@ -88,8 +98,8 @@ export const updateProductImage = (productId, formData) => async (dispatch) => {
       type: "updateProductImageRequest",
     });
     //HITTING NODE UPDATE ORDER API REQUEST
-    const { data } = await axios.put(
-      `${server}/product/image/${productId}`,
+    const { data } = await axiosInstance.put(
+      `/product/image/${productId}`,
       formData,
       {
         headers: {
@@ -101,10 +111,10 @@ export const updateProductImage = (productId, formData) => async (dispatch) => {
       type: "updateProductImageSuccess",
       payload: data,
     });
-    dispatch(getAllProducts());
+    return dispatch(getAllProducts());
   } catch (error) {
     console.log(error);
-    dispatch({
+    return dispatch({
       type: "updateProductImageFail",
       payload: error.response?.data?.message || error.message,
     });
@@ -124,18 +134,17 @@ export const deleteProductImage =
       }`;
 
       //HITTING NODE UPDATE ORDER API REQUEST
-      const { data } = await axios.delete(
-        `${server}/product/delete-image/${productId}/?${query}`,
-        { withCredentials: true }
+      const { data } = await axiosInstance.delete(
+        `/product/delete-image/${productId}/?${query}`
       );
       dispatch({
         type: "deleteProductImageSuccess",
         payload: data,
       });
-      dispatch(getAllProducts());
+      return dispatch(getAllProducts());
     } catch (error) {
       console.log(error);
-      dispatch({
+      return dispatch({
         type: "deleteProductImageFail",
         payload: error.response?.data?.message || error.message,
       });
@@ -149,20 +158,17 @@ export const deleteAllProductImages = (productId) => async (dispatch) => {
       type: "deleteProductAllImageRequest",
     });
     //HITTING NODE UPDATE ORDER API REQUEST
-    const { data } = await axios.delete(
-      `${server}/product/delete-image/all/${productId}`,
-      {
-        withCredentials: true,
-      }
+    const { data } = await axiosInstance.delete(
+      `/product/delete-image/all/${productId}`
     );
     dispatch({
       type: "deleteProductAllImageSuccess",
       payload: data,
     });
-    dispatch(getAllProducts());
+    return dispatch(getAllProducts());
   } catch (error) {
     console.log(error);
-    dispatch({
+    return dispatch({
       type: "deleteProductAllImageFail",
       payload: error.response?.data?.message || error.message,
     });
@@ -174,18 +180,15 @@ export const deleteProduct = (productId) => async (dispatch) => {
   try {
     dispatch({ type: "deleteProductRequest" });
 
-    const { data } = await axios.delete(
-      `${server}/product/delete-product/${productId}`,
-      {
-        withCredentials: true,
-      }
+    const { data } = await axiosInstance.delete(
+      `/product/delete-product/${productId}`
     );
 
-    dispatch({ type: "deleteProductSuccess", payload: data });
+    return dispatch({ type: "deleteProductSuccess", payload: data });
     // dispatch(getAllProducts());
   } catch (error) {
     console.log(error);
-    dispatch({
+    return dispatch({
       type: "deleteProductFail",
       payload: error.response?.data?.message || error.message,
     });
@@ -197,10 +200,9 @@ export const reviewProduct = (productId, reviewData) => async (dispatch) => {
   try {
     dispatch({ type: "reviewProductRequest" });
 
-    const { data } = await axios.put(
-      `${server}/product/${productId}/review`,
-      reviewData,
-      { withCredentials: true }
+    const { data } = await axiosInstance.put(
+      `/product/${productId}/review`,
+      reviewData
     );
 
     dispatch({
@@ -208,10 +210,10 @@ export const reviewProduct = (productId, reviewData) => async (dispatch) => {
       payload: data.message,
     });
 
-    dispatch(getAllProducts());
+    return dispatch(getAllProducts());
   } catch (error) {
     console.log(error);
-    dispatch({
+    return dispatch({
       type: "reviewProductFail",
       payload: error.response?.data?.message || error.message,
     });
@@ -221,5 +223,5 @@ export const reviewProduct = (productId, reviewData) => async (dispatch) => {
 //CLEAR MESSAGE AND ERROR
 export const clearMessage = () => (dispatch) => {
   dispatch({ type: "clearMessage" });
-  dispatch({ type: "clearError" });
+  return dispatch({ type: "clearError" });
 };

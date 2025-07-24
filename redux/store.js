@@ -1,48 +1,45 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { userReducer } from "./features/auth/userReducer";
-import { orderReducer } from "./features/auth/orderReducer";
-import { cartReducer } from "./features/auth/cartReducer";
 import { productReducer } from "./features/auth/productReducer";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  persistReducer,
-  persistStore,
-  FLUSH,
-  REHYDRATE,
-  PAUSE,
-  PERSIST,
-  PURGE,
-  REGISTER,
-} from "redux-persist";
+import { cartReducer } from "./features/auth/cartReducer";
 import { categoryReducer } from "./features/auth/categoryReducer";
+import { orderReducer } from "./features/auth/orderReducer";
+import { wishlistReducer } from "./features/auth/wishlistReducer";
+import { persistStore, persistReducer } from "redux-persist";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { combineReducers } from "redux";
 
-// persist only cart
-const cartPersistConfig = {
-  key: "cart",
+export const server = "https://nodejsapp-hfpl.onrender.com/api/v1";
+
+// Root persist config
+const persistConfig = {
+  key: "root",
   storage: AsyncStorage,
+  whitelist: ["user", "cart", "wishlist"], // only these will be persisted
 };
 
-const persistedCartReducer = persistReducer(cartPersistConfig, cartReducer);
+// Create root reducer
+const rootReducer = combineReducers({
+  user: userReducer,
+  product: productReducer,
+  cart: cartReducer,
+  category: categoryReducer,
+  order: orderReducer,
+  wishlist: wishlistReducer,
+});
 
-export default store = configureStore({
-  reducer: {
-    user: userReducer,
-    order: orderReducer,
-    cart: persistedCartReducer,
-    product: productReducer,
-    category: categoryReducer,
-  },
+// Create persisted reducer
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+// Create store
+const store = configureStore({
+  reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: {
-        // ignore redux-persist non-serializable actions
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-      },
+      immutableCheck: false,
+      serializableCheck: false,
     }),
 });
 
 export const persistor = persistStore(store);
-
-//HOST
-export const server = "https://nodejsapp-hfpl.onrender.com/api/v1";
-// export const server = "http://192.168.8.209:8080/api/v1";
+export default store;

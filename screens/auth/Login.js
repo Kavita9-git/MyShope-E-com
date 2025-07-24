@@ -7,48 +7,143 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import InputBox from "../../components/Form/InputBox";
-
-import { login } from "../../redux/features/auth/userActions";
+import {
+  login,
+  clearMessage,
+  updateSavedAddresses,
+} from "../../redux/features/auth/userActions";
 import { useDispatch, useSelector } from "react-redux";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Do not use the custom hook for Login - we'll handle auth directly
+// import { useReduxStateHook } from "../../hooks/customHook";
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const initialRenderRef = useRef(true);
 
   const dispatch = useDispatch();
-  const { loading, error, message, isAuth } = useSelector(
+  const { error, message, isAuth, loading } = useSelector(
     (state) => state.user
   );
 
+  useEffect(() => {
+    dispatch(clearMessage());
+  }, []);
+
   const handleLogin = () => {
+    // Clear previous error messages
+    setErrorMessage("");
+
+    // Input validation
     if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password.");
+      setErrorMessage("Please enter both email and password.");
       return;
     }
+    setIsLoading(true);
     dispatch(login(email, password));
   };
 
   useEffect(() => {
+    // Skip on first render to avoid navigation issues
+    if (initialRenderRef.current) {
+      initialRenderRef.current = false;
+      return;
+    }
+
+    // Handle loading state from Redux
+    if (loading !== undefined) {
+      setIsLoading(loading);
+    }
+
+    // console.log("Redux error state:", error);
+
     if (error) {
-      Alert.alert("Login Error", error);
+      setIsLoading(false);
+      setErrorMessage(error);
+
+      // Clear the Redux error after displaying it
+      setTimeout(() => {
+        dispatch(clearMessage());
+      }, 100);
     }
 
     if (message) {
-      Alert.alert("Login Success", message);
+      // Successful login message
+      setErrorMessage("");
     }
 
+    // Only check for pending addresses if we're authenticated
     if (isAuth) {
-      navigation.navigate("home");
+      setIsLoading(false);
+      setErrorMessage("");
+
+      // Check for pending addresses
+      checkPendingAddresses();
+
+      // Don't try to navigate here - let Main.js handle the stack switching
+      // based on isAuth state that we've updated through Redux
     }
-  }, [error, message, isAuth, dispatch, navigation]);
+  }, [error, message, isAuth, loading, dispatch]);
+
+  // Check for pending addresses and sync them with the user account
+  const checkPendingAddresses = async () => {
+    try {
+      // Check if there's a pending address to save
+      const pendingAddressJson = await AsyncStorage.getItem("@pendingAddress");
+
+      if (pendingAddressJson) {
+        const pendingAddress = JSON.parse(pendingAddressJson);
+
+        // Get existing saved addresses
+        const savedAddressesJson = await AsyncStorage.getItem(
+          "@savedShippingAddresses"
+        );
+        let savedAddresses = [];
+
+        if (savedAddressesJson) {
+          savedAddresses = JSON.parse(savedAddressesJson);
+        }
+
+        // Check if this address is already saved
+        const addressExists = savedAddresses.some(
+          (addr) =>
+            addr.address === pendingAddress.address &&
+            addr.city === pendingAddress.city &&
+            addr.country === pendingAddress.country
+        );
+
+        if (!addressExists) {
+          // Add the pending address to saved addresses
+          const updatedAddresses = [...savedAddresses, pendingAddress];
+
+          // Update local storage
+          await AsyncStorage.setItem(
+            "@savedShippingAddresses",
+            JSON.stringify(updatedAddresses)
+          );
+
+          // Update server
+          dispatch(updateSavedAddresses(updatedAddresses));
+        }
+
+        // Clear the pending address
+        await AsyncStorage.removeItem("@pendingAddress");
+      }
+    } catch (error) {
+      console.log("Error handling pending address:", error);
+    }
+  };
 
   const loginImage =
-    "data:image/jpeg;base64,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";
+    "data:image/jpeg;base64,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";
 
   return (
     <View style={styles.fullScreenContainer}>
@@ -78,7 +173,7 @@ const Login = ({ navigation }) => {
               placeholder="Enter Email"
               value={email}
               setValue={setEmail}
-              autoComplete={"email"}
+              autoComplete={"on"}
               keyboardType={"email-address"}
             />
             <InputBox
@@ -89,15 +184,20 @@ const Login = ({ navigation }) => {
               secureTextEntry={true}
               autoComplete={"password"}
             />
+
+            {/* Display error message if any */}
+            {errorMessage ? (
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            ) : null}
           </View>
 
           <View style={styles.btnContainer}>
             <TouchableOpacity
               style={styles.loginBtn}
               onPress={handleLogin}
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? (
+              {isLoading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <Text style={styles.loginBtnText}>Login</Text>
@@ -142,15 +242,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
   },
   mainIcon: {
-    // Adjusted margins for its new position
-    marginTop: 10, // Space above the icon (from the image)
-    marginBottom: 10, // Space below the icon (to the "Welcome Back!" text)
+    marginTop: 10,
+    marginBottom: 10,
   },
   image: {
     height: 180,
     width: "100%",
     resizeMode: "contain",
-    marginBottom: 0, // Removed bottom margin as icon will now be below it
+    marginBottom: 0,
   },
   headerContainer: {
     alignItems: "center",
@@ -160,7 +259,6 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
     color: "#333",
-    // marginTop: 15, // This will provide space from the icon above it
   },
   subHeaderText: {
     fontSize: 16,
@@ -213,6 +311,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 15,
     textDecorationLine: "underline",
+  },
+  errorText: {
+    color: "#ff3b30",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 5,
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
 

@@ -18,9 +18,14 @@ import {
 } from "../../redux/features/auth/userActions";
 import AntDesign from "react-native-vector-icons/AntDesign";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
+import useProtectedRoute from "../../hooks/useProtectedRoute";
 
 const Profile = ({ navigation }) => {
+  // Use protected route hook with skipNavigation=true
+  const { user: currentUser } = useProtectedRoute();
+
   const dispatch = useDispatch();
   const { user, msg } = useSelector((state) => state.user);
 
@@ -54,24 +59,58 @@ const Profile = ({ navigation }) => {
   };
 
   return (
-    <Layout>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: profilePic }} style={styles.image} />
-          <Pressable onPress={() => alert("Profile Dialogbox")}>
-            <Text style={styles.updatePicText}>
-              <AntDesign name="camera" size={16} color="#3498db" /> Update your
-              profile pic
-            </Text>
-          </Pressable>
+    <Layout showBackButton={true}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={["#1e3c72", "#2a5298"]}
+            style={styles.headerGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <View style={styles.profileHeader}>
+              <View style={styles.profileImageContainer}>
+                <Image
+                  source={{
+                    uri: profilePic?.startsWith("http")
+                      ? profilePic
+                      : `https://nodejsapp-hfpl.onrender.com${profilePic}`,
+                  }}
+                  style={styles.profileImage}
+                />
+              </View>
+              <Text style={styles.headerTitle}>Edit Profile</Text>
+              <Text style={styles.headerSubtitle}>
+                Update your personal information
+              </Text>
+              <Pressable
+                style={styles.changePicButton}
+                onPress={() => navigation.navigate("uploadprofilepic")}
+              >
+                <AntDesign name="camera" size={16} color="#fff" />
+                <Text style={styles.changePicText}>Update profile picture</Text>
+              </Pressable>
+            </View>
+          </LinearGradient>
         </View>
+
+        <Text style={styles.sectionTitle}>Personal Information</Text>
 
         <View style={styles.formCard}>
           <View style={styles.inputWithIcon}>
-            <View style={[styles.iconBox, { backgroundColor: "#2ecc71" }]}>
+            <LinearGradient
+              colors={["#4facfe", "#00f2fe"]}
+              style={styles.iconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               <AntDesign name="user" size={18} color="#fff" />
-            </View>
+            </LinearGradient>
             <View style={styles.inputBoxWrapper}>
+              <Text style={styles.inputLabel}>Full Name</Text>
               <InputBox
                 value={name}
                 setValue={setName}
@@ -82,10 +121,16 @@ const Profile = ({ navigation }) => {
           </View>
 
           <View style={styles.inputWithIcon}>
-            <View style={[styles.iconBox, { backgroundColor: "#3498db" }]}>
+            <LinearGradient
+              colors={["#6a11cb", "#2575fc"]}
+              style={styles.iconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               <MaterialIcons name="email" size={18} color="#fff" />
-            </View>
+            </LinearGradient>
             <View style={styles.inputBoxWrapper}>
+              <Text style={styles.inputLabel}>Email Address</Text>
               <InputBox
                 value={email}
                 setValue={setEmail}
@@ -96,10 +141,16 @@ const Profile = ({ navigation }) => {
           </View>
 
           <View style={styles.inputWithIcon}>
-            <View style={[styles.iconBox, { backgroundColor: "#e67e22" }]}>
+            <LinearGradient
+              colors={["#FF9966", "#FF5E62"]}
+              style={styles.iconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               <MaterialIcons name="location-on" size={18} color="#fff" />
-            </View>
+            </LinearGradient>
             <View style={styles.inputBoxWrapper}>
+              <Text style={styles.inputLabel}>Address</Text>
               <InputBox
                 value={address}
                 setValue={setAddress}
@@ -110,10 +161,16 @@ const Profile = ({ navigation }) => {
           </View>
 
           <View style={styles.inputWithIcon}>
-            <View style={[styles.iconBox, { backgroundColor: "#9b59b6" }]}>
+            <LinearGradient
+              colors={["#b721ff", "#21d4fd"]}
+              style={styles.iconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               <AntDesign name="enviromento" size={18} color="#fff" />
-            </View>
+            </LinearGradient>
             <View style={styles.inputBoxWrapper}>
+              <Text style={styles.inputLabel}>City</Text>
               <InputBox
                 value={city}
                 setValue={setCity}
@@ -124,10 +181,16 @@ const Profile = ({ navigation }) => {
           </View>
 
           <View style={styles.inputWithIcon}>
-            <View style={[styles.iconBox, { backgroundColor: "#f39c12" }]}>
+            <LinearGradient
+              colors={["#56ab2f", "#a8e063"]}
+              style={styles.iconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               <AntDesign name="phone" size={18} color="#fff" />
-            </View>
+            </LinearGradient>
             <View style={styles.inputBoxWrapper}>
+              <Text style={styles.inputLabel}>Phone Number</Text>
               <InputBox
                 value={phone}
                 setValue={setPhone}
@@ -137,9 +200,20 @@ const Profile = ({ navigation }) => {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.btnUpdate} onPress={handleUpdate}>
-            <Text style={styles.btnUpdateText}>UPDATE PROFILE</Text>
+          <TouchableOpacity onPress={handleUpdate}>
+            <LinearGradient
+              colors={["#1e3c72", "#2a5298"]}
+              style={styles.btnUpdate}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.btnUpdateText}>UPDATE PROFILE</Text>
+            </LinearGradient>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Profile Management v1.0</Text>
         </View>
       </ScrollView>
     </Layout>
@@ -150,28 +224,72 @@ export default Profile;
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f8f9fa",
+    minHeight: "100%",
   },
-  imageContainer: {
-    justifyContent: "center",
-    alignItems: "center",
+  headerContainer: {
     marginBottom: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    overflow: "hidden",
   },
-  image: {
-    height: 120,
+  headerGradient: {
+    paddingTop: 30,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+  },
+  profileHeader: {
+    alignItems: "center",
+  },
+  profileImageContainer: {
+    padding: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 65,
+    marginBottom: 16,
+  },
+  profileImage: {
     width: 120,
+    height: 120,
     borderRadius: 60,
     borderWidth: 2,
-    borderColor: "#ddd",
+    borderColor: "#fff",
   },
-  updatePicText: {
-    color: "#3498db",
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 12,
+  },
+  changePicButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     marginTop: 8,
+  },
+  changePicText: {
+    color: "#fff",
+    marginLeft: 5,
     fontSize: 14,
     fontWeight: "500",
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    paddingHorizontal: 15,
+    color: "#333",
+  },
   formCard: {
+    marginHorizontal: 15,
     backgroundColor: "#fff",
     padding: 20,
     borderRadius: 12,
@@ -180,34 +298,48 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 5,
     elevation: 3,
+    marginBottom: 15,
   },
   inputWithIcon: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 18,
   },
-  iconBox: {
-    width: 40,
-    height: 40,
+  iconGradient: {
+    width: 45,
+    height: 45,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
   inputBoxWrapper: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 15,
+  },
+  inputLabel: {
+    fontSize: 12,
+    color: "#718096",
+    marginBottom: 4,
   },
   btnUpdate: {
-    backgroundColor: "#3498db",
     height: 50,
     borderRadius: 25,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 10,
   },
   btnUpdateText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  footer: {
+    marginTop: 20,
+    marginBottom: 30,
+    alignItems: "center",
+  },
+  footerText: {
+    color: "#a0aec0",
+    fontSize: 12,
   },
 });
