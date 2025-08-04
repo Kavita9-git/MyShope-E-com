@@ -24,18 +24,18 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import Feather from "react-native-vector-icons/Feather";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-import Toast from "react-native-toast-message";
+// import Toast from "react-native-toast-message";
 import { clearError, clearMessage } from "../redux/features/auth/cartActions";
+import Toast from "../components/Message/Toast";
+import useToast from "../hooks/useToast";
 
 const WishList = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const {
-    wishlistItems = [],
-    loading,
-    error,
-    message = "",
-  } = useSelector((state) => state.wishlist || {});
+  const { wishlistItems = [], loading, error, message = "" } = useSelector(
+    (state) => state.wishlist || {}
+  );
+  const { toast, showSuccess, showError, hideToast } = useToast();
 
   // Local state for handling UI feedback
   const [removingItemId, setRemovingItemId] = useState(null);
@@ -61,14 +61,14 @@ const WishList = () => {
   // Show success messages with toast
   useEffect(() => {
     if (message) {
-      Toast.show({
-        type: "success",
-        text1: "Success",
-        text2: message,
-        position: "bottom",
-        visibilityTime: 2000,
-      });
-
+      // Toast.show({
+      //   type: "success",
+      //   text1: "Success",
+      //   text2: message,
+      //   position: "bottom",
+      //   visibilityTime: 2000,
+      // });
+      showSuccess(message);
       dispatch(clearWishlistMessage());
     }
   }, [message, dispatch]);
@@ -76,13 +76,14 @@ const WishList = () => {
   // Show error messages with toast (only for user actions)
   useEffect(() => {
     if (error && removingItemId) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: error,
-        position: "bottom",
-        visibilityTime: 2000,
-      });
+      // Toast.show({
+      //   type: "error",
+      //   text1: "Error",
+      //   text2: error,
+      //   position: "bottom",
+      //   visibilityTime: 2000,
+      // });
+      showError(error);
       dispatch(clearWishlistError());
     }
   }, [error, removingItemId, dispatch]);
@@ -94,12 +95,13 @@ const WishList = () => {
         // Success message will be handled by the useEffect
       })
       .catch((err) => {
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: "Failed to move item to cart",
-          position: "bottom",
-        });
+        // Toast.show({
+        //   type: "error",
+        //   text1: "Error",
+        //   text2: "Failed to move item to cart",
+        //   position: "bottom",
+        // });
+        showError("Failed to move item to cart");
       });
   };
 
@@ -116,22 +118,24 @@ const WishList = () => {
         })
         .catch((err) => {
           console.error("Error in removal:", err);
-          Toast.show({
-            type: "error",
-            text1: "Error",
-            text2: "Failed to remove item from wishlist",
-            position: "bottom",
-          });
+          // Toast.show({
+          //   type: "error",
+          //   text1: "Error",
+          //   text2: "Failed to remove item from wishlist",
+          //   position: "bottom",
+          // });
+          showError("Failed to remove item from wishlist");
           setRemovingItemId(null);
         });
     } catch (err) {
       console.error("Exception in removal:", err);
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "An unexpected error occurred",
-        position: "bottom",
-      });
+      // Toast.show({
+      //   type: "error",
+      //   text1: "Error",
+      //   text2: "An unexpected error occurred",
+      //   position: "bottom",
+      // });
+      showError("An unexpected error occurred");
       setRemovingItemId(null);
     }
   };
@@ -316,6 +320,14 @@ const WishList = () => {
           <Text style={styles.footerText}>Wishlist v1.0</Text>
         </View>
       </ScrollView>
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+        duration={toast.duration}
+        position={toast.position}
+      />
     </Layout>
   );
 };

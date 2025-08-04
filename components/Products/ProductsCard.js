@@ -180,20 +180,22 @@ const ProductsCard = ({ p }) => {
         await dispatch(addToWishlist(item));
         dispatch(clearWishlistMessage());
         dispatch(clearWishlistError());
-        Toast.show({
-          type: "success",
-          text1: "Success!",
-          text2: "Product added to wishlist",
-          position: "bottom",
-        });
+        // Toast.show({
+        //   type: "success",
+        //   text1: "Success!",
+        //   text2: "Product added to wishlist",
+        //   position: "bottom",
+        // });
+        setSuccessMessage("Product added to wishlist");
       } catch (error) {
         console.log("Error adding to wishlist:", error);
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: "Failed to add to wishlist",
-          position: "bottom",
-        });
+        // Toast.show({
+        //   type: "error",
+        //   text1: "Error",
+        //   text2: "Failed to add to wishlist",
+        //   position: "bottom",
+        // });
+        setErrorMessage("Failed to add to wishlist");
       } finally {
         setIsAddingToWishlist(false);
       }
@@ -218,24 +220,25 @@ const ProductsCard = ({ p }) => {
 
       await dispatch(addToWishlist(item));
       setWishlistModalVisible(false);
-      Toast.show({
-        type: "success",
-        text1: "Success!",
-        text2: "Product added to wishlist",
-        position: "bottom",
-      });
-
+      // Toast.show({
+      //   type: "success",
+      //   text1: "Success!",
+      //   text2: "Product added to wishlist",
+      //   position: "bottom",
+      // });
+      setSuccessMessage("Product added to wishlist");
       // Reset selections for next time
       setSelectedColor(null);
       setSelectedSize(null);
     } catch (error) {
       console.log("Error adding to wishlist:", error);
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to add to wishlist",
-        position: "bottom",
-      });
+      // Toast.show({
+      //   type: "error",
+      //   text1: "Error",
+      //   text2: "Failed to add to wishlist",
+      //   position: "bottom",
+      // });
+      setErrorMessage("Failed to add to wishlist");
     } finally {
       setIsAddingToWishlist(false);
     }

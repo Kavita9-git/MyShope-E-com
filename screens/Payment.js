@@ -6,30 +6,28 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
-} from "react-native";
-import React, { useState, useEffect } from "react";
-import Layout from "../components/Layout/Layout";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  createOrder,
-  clearMessages,
-} from "../redux/features/auth/orderActions";
-import { clearCart } from "../redux/features/auth/cartActions";
-import { LinearGradient } from "expo-linear-gradient";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import InputBox from "../components/Form/InputBox";
+} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import Layout from '../components/Layout/Layout';
+import { useDispatch, useSelector } from 'react-redux';
+import { createOrder, clearMessages } from '../redux/features/auth/orderActions';
+import { clearCart } from '../redux/features/auth/cartActions';
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import InputBox from '../components/Form/InputBox';
+import Toast from '../components/Message/Toast';
+import useToast from '../hooks/useToast';
 
 const Payment = ({ navigation, route }) => {
   const dispatch = useDispatch();
-  const { loading, success, error, message } = useSelector(
-    (state) => state.order
-  );
+  const { loading, success, error, message } = useSelector(state => state.order);
+  const { toast, showSuccess, showError, hideToast } = useToast();
 
   // Payment form state
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [nameOnCard, setNameOnCard] = useState("");
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [cvc, setCvc] = useState('');
+  const [nameOnCard, setNameOnCard] = useState('');
   const [processing, setProcessing] = useState(false);
 
   // Get order data from route params
@@ -43,12 +41,12 @@ const Payment = ({ navigation, route }) => {
   // Handle success message
   useEffect(() => {
     if (success && message) {
-      Alert.alert("Success", message, [
+      Alert.alert('Success', message, [
         {
-          text: "OK",
+          text: 'OK',
           onPress: () => {
             dispatch(clearCart());
-            navigation.navigate("home");
+            navigation.navigate('myorders');
           },
         },
       ]);
@@ -58,23 +56,27 @@ const Payment = ({ navigation, route }) => {
   // Handle error
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error);
+      //Alert.alert('Error', error);
+      showError(error);
     }
   }, [error]);
 
   const handlePayment = async () => {
     // Validate form
     if (!cardNumber || !expiryDate || !cvc || !nameOnCard) {
-      return Alert.alert("Required", "Please fill all payment details");
+      //return Alert.alert('Required', 'Please fill all payment details');
+      return showError('Please fill all payment details');
     }
 
     // Basic validation
     if (cardNumber.length < 16) {
-      return Alert.alert("Invalid", "Please enter a valid card number");
+      //return Alert.alert('Invalid', 'Please enter a valid card number');
+      return showError('Please enter a valid card number');
     }
 
     if (cvc.length < 3) {
-      return Alert.alert("Invalid", "Please enter a valid CVC");
+      //return Alert.alert('Invalid', 'Please enter a valid CVC');
+      return showError('Please enter a valid CVC');
     }
 
     try {
@@ -89,8 +91,8 @@ const Payment = ({ navigation, route }) => {
         const orderWithPayment = {
           ...orderData,
           paymentInfo: {
-            id: route.params?.paymentIntentId || "mock-payment-" + Date.now(),
-            status: "completed",
+            id: route.params?.paymentIntentId || 'mock-payment-' + Date.now(),
+            status: 'completed',
           },
           paidAt: new Date(),
         };
@@ -100,7 +102,8 @@ const Payment = ({ navigation, route }) => {
       }, 2000);
     } catch (err) {
       setProcessing(false);
-      Alert.alert("Payment Failed", err.message);
+      //Alert.alert('Payment Failed', err.message);
+      return showError(err.message);
     }
   };
 
@@ -113,7 +116,7 @@ const Payment = ({ navigation, route }) => {
       >
         <View style={styles.headerContainer}>
           <LinearGradient
-            colors={["#1e3c72", "#2a5298"]}
+            colors={['#1e3c72', '#2a5298']}
             style={styles.headerGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -131,15 +134,12 @@ const Payment = ({ navigation, route }) => {
         <View style={styles.contentContainer}>
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>
-              <Icon name="credit-card" size={18} color="#1e3c72" /> Payment
-              Details
+              <Icon name="credit-card" size={18} color="#1e3c72" /> Payment Details
             </Text>
 
             <View style={styles.paymentAmount}>
               <Text style={styles.amountLabel}>Amount to Pay:</Text>
-              <Text style={styles.amountValue}>
-                ${orderData?.totalAmount?.toFixed(2)}
-              </Text>
+              <Text style={styles.amountValue}>${orderData?.totalAmount?.toFixed(2)}</Text>
             </View>
 
             <InputBox
@@ -196,7 +196,7 @@ const Payment = ({ navigation, route }) => {
             style={styles.payButton}
           >
             <LinearGradient
-              colors={["#1e3c72", "#2a5298"]}
+              colors={['#1e3c72', '#2a5298']}
               style={styles.payButtonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -205,12 +205,7 @@ const Payment = ({ navigation, route }) => {
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <>
-                  <Icon
-                    name="lock"
-                    size={22}
-                    color="#fff"
-                    style={styles.btnIcon}
-                  />
+                  <Icon name="lock" size={22} color="#fff" style={styles.btnIcon} />
                   <Text style={styles.payButtonText}>
                     Pay ${orderData?.totalAmount?.toFixed(2)}
                   </Text>
@@ -224,6 +219,14 @@ const Payment = ({ navigation, route }) => {
           </View>
         </View>
       </ScrollView>
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+        duration={toast.duration}
+        position={toast.position}
+      />
     </Layout>
   );
 };
@@ -231,7 +234,7 @@ const Payment = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: '#f8f9fa',
   },
   container: {
     flexGrow: 1,
@@ -241,7 +244,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   headerGradient: {
     paddingTop: 30,
@@ -249,38 +252,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   headerContent: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: "center",
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
     marginBottom: 6,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.8)",
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
   },
   contentContainer: {
     paddingHorizontal: 15,
   },
   formSection: {
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -288,76 +291,76 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 15,
-    color: "#333",
-    flexDirection: "row",
-    alignItems: "center",
+    color: '#333',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   paymentAmount: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 15,
-    backgroundColor: "#f0f9ff",
+    backgroundColor: '#f0f9ff',
     borderRadius: 8,
     marginBottom: 20,
   },
   amountLabel: {
     fontSize: 14,
-    color: "#333",
+    color: '#333',
   },
   amountValue: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#1e3c72",
+    fontWeight: '700',
+    color: '#1e3c72',
   },
   rowInputs: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   halfInput: {
-    width: "48%",
+    width: '48%',
   },
   secureInfo: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 15,
     paddingTop: 15,
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    borderTopColor: '#f0f0f0',
   },
   secureText: {
     marginLeft: 8,
     fontSize: 12,
-    color: "#666",
+    color: '#666',
   },
   payButton: {
     marginVertical: 20,
     borderRadius: 25,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   payButtonGradient: {
-    flexDirection: "row",
+    flexDirection: 'row',
     paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   btnIcon: {
     marginRight: 10,
   },
   payButtonText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   footer: {
     marginTop: 10,
-    alignItems: "center",
+    alignItems: 'center',
   },
   footerText: {
-    color: "#a0aec0",
+    color: '#a0aec0',
     fontSize: 12,
   },
 });

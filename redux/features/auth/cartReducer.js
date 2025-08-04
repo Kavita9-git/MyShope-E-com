@@ -1,4 +1,4 @@
-import { createReducer } from "@reduxjs/toolkit";
+import { createReducer } from '@reduxjs/toolkit';
 
 export const cartReducer = createReducer(
   {
@@ -6,112 +6,112 @@ export const cartReducer = createReducer(
     message: null,
     error: null,
   },
-  (builder) => {
+  builder => {
     // ADD TO CART
-    builder.addCase("addToCartRequest", (state, action) => {
+    builder.addCase('addToCartRequest', (state, action) => {
       state.loading = true;
     });
 
-    builder.addCase("addToCartSuccess", (state, action) => {
+    builder.addCase('addToCartSuccess', (state, action) => {
       state.loading = false;
       state.items = action.payload;
-      state.message = "Item added to cart";
+      state.message = 'Item added to cart';
     });
 
-    builder.addCase("addToCartFail", (state, action) => {
+    builder.addCase('addToCartFail', (state, action) => {
       state.loading = false;
       state.error = action.payload;
     });
 
     // GET CART
-    builder.addCase("getCartRequest", (state, action) => {
+    builder.addCase('getCartRequest', (state, action) => {
       state.loading = true;
     });
 
-    builder.addCase("getCartSuccess", (state, action) => {
+    builder.addCase('getCartSuccess', (state, action) => {
       state.loading = false;
       state.items = action.payload;
     });
 
-    builder.addCase("getCartFail", (state, action) => {
+    builder.addCase('getCartFail', (state, action) => {
       state.loading = false;
       state.error = action.payload;
     });
 
     //INCREASE QUANTITY
-    builder.addCase("increaseQtyRequest", (state, action) => {
+    builder.addCase('increaseQtyRequest', (state, action) => {
       state.loading = true;
     });
 
-    builder.addCase("increaseQtySuccess", (state, action) => {
+    builder.addCase('increaseQtySuccess', (state, action) => {
       state.loading = false;
       state.items = action.payload; // update items with latest cart from server
-      state.message = "Quantity increased";
+      state.message = 'Quantity increased';
     });
 
-    builder.addCase("increaseQtyFail", (state, action) => {
+    builder.addCase('increaseQtyFail', (state, action) => {
       state.loading = false;
       state.error = action.payload;
     });
 
     // Decrease Qty
-    builder.addCase("decreaseQtyRequest", (state) => {
+    builder.addCase('decreaseQtyRequest', state => {
       state.loading = true;
     });
-    builder.addCase("decreaseQtySuccess", (state, action) => {
+    builder.addCase('decreaseQtySuccess', (state, action) => {
       state.loading = false;
       state.items = action.payload; // update items with latest cart from server
-      state.message = "Quantity decreased";
+      state.message = 'Quantity decreased';
     });
-    builder.addCase("decreaseQtyFail", (state, action) => {
+    builder.addCase('decreaseQtyFail', (state, action) => {
       state.loading = false;
       state.error = action.payload;
     });
 
     // REMOVE ITEMS CART
-    builder.addCase("removeFromCartRequest", (state, action) => {
+    builder.addCase('removeFromCartRequest', (state, action) => {
       state.loading = true;
     });
 
-    builder.addCase("removeFromCartSuccess", (state, action) => {
+    builder.addCase('removeFromCartSuccess', (state, action) => {
       state.loading = false;
       state.items = action.payload;
-      state.message = "Item removed from cart";
+      state.message = 'Item removed from cart';
     });
 
-    builder.addCase("removeFromCartFail", (state, action) => {
+    builder.addCase('removeFromCartFail', (state, action) => {
       state.loading = false;
       state.error = action.payload;
     });
 
     // CLEAR CART
-    builder.addCase("clearCartRequest", (state, action) => {
+    builder.addCase('clearCartRequest', (state, action) => {
       state.loading = true;
     });
 
-    builder.addCase("clearCartSuccess", (state, action) => {
+    builder.addCase('clearCartSuccess', (state, action) => {
       state.loading = false;
       state.items = [];
-      state.message = "Cart cleared";
+      state.message = 'Cart cleared';
     });
 
-    builder.addCase("clearCartFail", (state, action) => {
+    builder.addCase('clearCartFail', (state, action) => {
       state.loading = false;
       state.error = action.payload;
     });
 
     // CLEAR MESSAGES / ERRORS
-    builder.addCase("clearError", (state) => {
+    builder.addCase('clearError', state => {
       state.error = null;
     });
-    builder.addCase("clearMessage", (state) => {
+    builder.addCase('clearMessage', state => {
       state.message = null;
     });
 
     // SET PRODUCT QTY BEFORE ADD TO CART
-    builder.addCase("setProductQtyBeforeAdd", (state, action) => {
+    builder.addCase('setProductQtyBeforeAdd', (state, action) => {
       const { productId, quantity } = action.payload;
-      const exist = state.items.find((i) => i.productId === productId);
+      const exist = state.items.find(i => i.productId === productId);
       if (!exist) {
         state.items.push({ productId, quantity });
       } else {
@@ -120,7 +120,7 @@ export const cartReducer = createReducer(
     });
 
     // SET CART FROM SERVER
-    builder.addCase("setCartFromServer", (state, action) => {
+    builder.addCase('setCartFromServer', (state, action) => {
       state.items = action.payload;
     });
   }

@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Custom hook to handle Redux auth state and navigation
@@ -9,14 +9,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
  * @param {boolean} skipNavigation - If true, won't perform navigation (for components that handle their own navigation)
  * @returns {boolean} loading - Returns the loading state
  */
-export const useReduxStateHook = (
-  navigation,
-  successPath = "home",
-  skipNavigation = false
-) => {
-  const { loading, error, message, isAuth } = useSelector(
-    (state) => state.user
-  );
+export const useReduxStateHook = (navigation, successPath = 'home', skipNavigation = false) => {
+  const { loading, error, message } = useSelector(state => state.user);
   const dispatch = useDispatch();
   const initialRenderRef = useRef(true);
 
@@ -34,38 +28,34 @@ export const useReduxStateHook = (
       }
       // Use setTimeout to avoid React scheduling conflicts
       setTimeout(() => {
-        dispatch({ type: "clearError" });
+        dispatch({ type: 'clearError' });
       }, 0);
     }
 
-    if (
-      message &&
-      !skipNavigation &&
-      navigation &&
-      typeof navigation.navigate === "function"
-    ) {
+    if (message && !skipNavigation && navigation && typeof navigation.navigate === 'function') {
       // Use setTimeout to avoid React scheduling conflicts
       setTimeout(() => {
-        dispatch({ type: "clearMessage" });
+        dispatch({ type: 'clearMessage' });
       }, 0);
 
       // Make sure we're not trying to navigate to the current screen
       const currentRoute = navigation.getCurrentRoute?.()?.name;
-
+      console.log('currentRoute :', currentRoute);
+      console.log('successPath :', successPath);
       // Special handling for login navigation
-      if (successPath === "login") {
+      if (successPath === 'login') {
         // Instead of navigating to login, handle auth state change
         // This will trigger Main.js to show AuthStack
         (async () => {
           try {
-            await AsyncStorage.setItem("@showLogin", "true");
-            await AsyncStorage.removeItem("@auth");
+            await AsyncStorage.setItem('@showLogin', 'true');
+            await AsyncStorage.removeItem('@auth');
             // Use setTimeout to avoid React scheduling conflicts
             setTimeout(() => {
-              dispatch({ type: "logoutSuccess" });
+              dispatch({ type: 'logoutSuccess' });
             }, 0);
           } catch (error) {
-            console.error("Error setting auth state:", error);
+            console.error('Error setting auth state:', error);
           }
         })();
         return;
@@ -73,9 +63,7 @@ export const useReduxStateHook = (
 
       if (currentRoute !== successPath) {
         // Check if the destination exists in the current navigator
-        const canNavigate = navigation
-          .getState()
-          .routeNames.includes(successPath);
+        const canNavigate = navigation.getState().routeNames.includes(successPath);
 
         if (canNavigate) {
           // Wrap in setTimeout to avoid potential navigation conflicts
@@ -83,21 +71,11 @@ export const useReduxStateHook = (
             navigation.navigate(successPath);
           }, 100);
         } else {
-          console.warn(
-            `Cannot navigate to ${successPath}: Screen not in current navigator`
-          );
+          console.warn(`Cannot navigate to ${successPath}: Screen not in current navigator`);
         }
       }
     }
-  }, [
-    error,
-    message,
-    dispatch,
-    navigation,
-    successPath,
-    skipNavigation,
-    isAuth,
-  ]);
+  }, [error, message, dispatch, navigation, successPath, skipNavigation]);
 
   return loading;
 };

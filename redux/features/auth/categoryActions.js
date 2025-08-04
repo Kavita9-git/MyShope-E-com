@@ -26,17 +26,14 @@ export const getAllCategories = () => async (dispatch) => {
 
 //CREATE CATEGORY ACTION
 export const createCategory =
-  (category, subcategories = []) =>
+  (categoryData) =>
   async (dispatch) => {
     try {
       dispatch({
         type: "createCategoryRequest",
       });
       //HITTING NODE CREATE CATEGORY API REQUEST
-      const { data } = await axiosInstance.post(`/category/create`, {
-        category,
-        subcategories,
-      });
+      const { data } = await axiosInstance.post(`/category/create`, categoryData);
       return dispatch({
         type: "createCategorySuccess",
         payload: data,

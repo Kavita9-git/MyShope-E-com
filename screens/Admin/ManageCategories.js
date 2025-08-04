@@ -1,73 +1,73 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import React, { useEffect } from "react";
-import Layout from "../../components/Layout/Layout";
-import AntDesign from "react-native-vector-icons/AntDesign";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import Feather from "react-native-vector-icons/Feather";
-import { LinearGradient } from "expo-linear-gradient";
-import { useDispatch, useSelector } from "react-redux";
-import { getAllCategories } from "../../redux/features/auth/categoryActions";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect } from 'react';
+import Layout from '../../components/Layout/Layout';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Feather from 'react-native-vector-icons/Feather';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useDispatch, useSelector } from 'react-redux';
+import { getAllCategories } from '../../redux/features/auth/categoryActions';
 
 const ManageCategories = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { categories = [] } = useSelector((state) => state.category);
+  const { categories = [] } = useSelector(state => state.category);
+
+  useEffect(() => {
+    dispatch(getAllCategories());
+  }, []);
 
   useEffect(() => {
     dispatch(getAllCategories());
   }, [dispatch]);
 
+  console.log(
+    'categories.map :',
+    categories.map(cat => ({
+      cat: cat.subcategories,
+    }))
+  );
+
   // Category management options with their respective details
   const categoryOptions = [
     {
-      label: "Create Categories",
-      icon: "plus-circle",
-      description: "Add new product categories",
-      screen: "createcategory",
-      gradient: ["#4facfe", "#00f2fe"],
+      label: 'Create Categories',
+      icon: 'plus-circle',
+      description: 'Add new product categories',
+      screen: 'createcategory',
+      gradient: ['#4facfe', '#00f2fe'],
     },
     {
-      label: "Update Categories",
-      icon: "edit",
-      description: "Modify existing categories",
+      label: 'Update Categories',
+      icon: 'edit',
+      description: 'Modify existing categories',
       action: () => {
         if (categories && categories.length > 0) {
-          navigation.navigate("updatecategory", {
+          navigation.navigate('updatecategory', {
             categoryId: categories[0]._id,
             categoryName: categories[0].category,
             categorySubcategories: categories[0].subcategories || [],
           });
         } else {
-          alert(
-            "No categories available to update. Please create a category first."
-          );
+          alert('No categories available to update. Please create a category first.');
         }
       },
-      gradient: ["#6a11cb", "#2575fc"],
+      gradient: ['#6a11cb', '#2575fc'],
     },
     {
-      label: "Delete Categories",
-      icon: "delete",
-      description: "Remove unwanted categories",
-      screen: "deletecategory",
-      gradient: ["#FF5E62", "#FF9966"],
+      label: 'Delete Categories',
+      icon: 'delete',
+      description: 'Remove unwanted categories',
+      screen: 'deletecategory',
+      gradient: ['#FF5E62', '#FF9966'],
     },
   ];
 
   return (
     <Layout showBackButton={true}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
           <LinearGradient
-            colors={["#1e3c72", "#2a5298"]}
+            colors={['#1e3c72', '#2a5298']}
             style={styles.headerGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -86,7 +86,7 @@ const ManageCategories = ({ navigation }) => {
 
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: "#ebf8ff" }]}>
+            <View style={[styles.statIconBox, { backgroundColor: '#ebf8ff' }]}>
               <Feather name="folder-plus" size={24} color="#3182ce" />
             </View>
             <View style={styles.statInfo}>
@@ -96,7 +96,7 @@ const ManageCategories = ({ navigation }) => {
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: "#feebef" }]}>
+            <View style={[styles.statIconBox, { backgroundColor: '#feebef' }]}>
               <Feather name="edit-2" size={24} color="#e53e3e" />
             </View>
             <View style={styles.statInfo}>
@@ -113,9 +113,7 @@ const ManageCategories = ({ navigation }) => {
             <TouchableOpacity
               key={index}
               style={styles.optionButton}
-              onPress={() =>
-                item.action ? item.action() : navigation.navigate(item.screen)
-              }
+              onPress={() => (item.action ? item.action() : navigation.navigate(item.screen))}
             >
               <LinearGradient
                 colors={item.gradient}
@@ -138,12 +136,12 @@ const ManageCategories = ({ navigation }) => {
           <>
             <Text style={styles.sectionTitle}>Available Categories</Text>
             <View style={styles.categoryContainer}>
-              {categories.map((category) => (
+              {categories.map(category => (
                 <TouchableOpacity
                   key={category._id}
                   style={styles.categoryCard}
                   onPress={() =>
-                    navigation.navigate("updatecategory", {
+                    navigation.navigate('updatecategory', {
                       categoryId: category._id,
                       categoryName: category.category,
                       categorySubcategories: category.subcategories || [],
@@ -156,7 +154,7 @@ const ManageCategories = ({ navigation }) => {
                       <TouchableOpacity
                         style={styles.editIcon}
                         onPress={() =>
-                          navigation.navigate("updatecategory", {
+                          navigation.navigate('updatecategory', {
                             categoryId: category._id,
                             categoryName: category.category,
                             categorySubcategories: category.subcategories || [],
@@ -168,21 +166,123 @@ const ManageCategories = ({ navigation }) => {
                     </View>
                   </View>
 
-                  {category.subcategories &&
-                    category.subcategories.length > 0 && (
-                      <View style={styles.subcategoriesContainer}>
-                        <Text style={styles.subcategoriesLabel}>
-                          Subcategories:
-                        </Text>
-                        <View style={styles.chipContainer}>
-                          {category.subcategories.map((subcat, idx) => (
-                            <View key={idx} style={styles.chip}>
-                              <Text style={styles.chipText}>{subcat}</Text>
-                            </View>
-                          ))}
-                        </View>
+                  {category.subcategories && category.subcategories.length > 0 && (
+                    <View style={styles.subcategoriesContainer}>
+                      <Text style={styles.subcategoriesLabel}>Subcategories:</Text>
+                      <View style={styles.chipContainer}>
+                        {(() => {
+                          try {
+                            // Convert subcategories to a safe array format
+                            let subcategoriesArray = [];
+                            // console.log('category.subcategories :', category.subcategories);
+                            if (Array.isArray(category.subcategories)) {
+                              subcategoriesArray = category.subcategories;
+                            } else if (
+                              category.subcategories &&
+                              typeof category.subcategories === 'object'
+                            ) {
+                              subcategoriesArray = Object.values(category.subcategories);
+                            }
+
+                            return subcategoriesArray.map((subcat, idx) => {
+                              // Safe name extraction
+                              let subcatName = 'Subcategory';
+                              console.log('Processing subcat:', subcat);
+                              
+                              try {
+                                if (typeof subcat === 'string') {
+                                  subcatName = subcat;
+                                } else if (subcat && typeof subcat === 'object') {
+                                  // First priority: check for 'name' property
+                                  if (subcat.name && typeof subcat.name === 'string') {
+                                    subcatName = subcat.name;
+                                  } 
+                                  // Second priority: check if the object itself contains character data
+                                  else {
+                                    const keys = Object.keys(subcat);
+                                    const values = Object.values(subcat);
+                                    
+                                    // Filter out MongoDB ObjectId and other non-string meaningful data
+                                    const meaningfulValues = values.filter(val => {
+                                      if (typeof val === 'string') {
+                                        // Skip if it looks like an ObjectId (24 hex characters) or other IDs
+                                        if (val.length === 24 && /^[0-9a-fA-F]{24}$/.test(val)) {
+                                          return false;
+                                        }
+                                        // Skip very short strings unless they're part of a character array
+                                        return val.trim().length > 0;
+                                      }
+                                      return false;
+                                    });
+                                    
+                                    // Check if it's a character array (all single characters)
+                                    if (
+                                      keys.every(key => !isNaN(key)) &&
+                                      meaningfulValues.every(val => val.length === 1)
+                                    ) {
+                                      // Reconstruct the original string from character array
+                                      subcatName = meaningfulValues.join('');
+                                    } 
+                                    // Otherwise take the first meaningful string that's longer than 1 character
+                                    else {
+                                      const longStrings = meaningfulValues.filter(val => val.length > 1);
+                                      if (longStrings.length > 0) {
+                                        subcatName = longStrings[0];
+                                      } else if (meaningfulValues.length > 0) {
+                                        // If no long strings, join all meaningful values
+                                        subcatName = meaningfulValues.join('');
+                                      }
+                                    }
+                                  }
+                                }
+                              } catch (error) {
+                                console.log('Error processing subcategory:', error);
+                                subcatName = `Subcategory ${idx + 1}`;
+                              }
+
+                                // Render subcategory chip
+                                const subcategoryChips = [
+                                  <View key={`subcat-${idx}`} style={styles.chip}>
+                                    <Text style={styles.chipText}>{subcatName}</Text>
+                                  </View>
+                                ];
+
+                                // Add sub-subcategories if they exist
+                                if (subcat && typeof subcat === 'object' && subcat.subSubCategories && Array.isArray(subcat.subSubCategories)) {
+                                  subcat.subSubCategories.forEach((subSubCat, subSubIdx) => {
+                                    let subSubCatName = 'Sub-subcategory';
+                                    try {
+                                      if (typeof subSubCat === 'string') {
+                                        subSubCatName = subSubCat;
+                                      } else if (subSubCat && typeof subSubCat === 'object' && subSubCat.name) {
+                                        subSubCatName = subSubCat.name;
+                                      }
+                                    } catch (error) {
+                                      console.log('Error processing sub-subcategory:', error);
+                                    }
+                                    
+                                    subcategoryChips.push(
+                                      <View key={`subsubcat-${idx}-${subSubIdx}`} style={[styles.chip, styles.subSubChip]}>
+                                        <Text style={[styles.chipText, styles.subSubChipText]}>  └ {subSubCatName}</Text>
+                                      </View>
+                                    );
+                                  });
+                                }
+
+                                return subcategoryChips;
+                              });
+                          } catch (error) {
+                            console.log('Error processing subcategories:', error);
+                            return (
+                              <View style={styles.chip}>
+                                <Text style={styles.chipText}>Error loading subcategories</Text>
+                              </View>
+                            );
+                          }
+                        })()}
                       </View>
-                    )}
+                    </View>
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -199,15 +299,15 @@ const ManageCategories = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f8f9fa",
-    minHeight: "100%",
+    backgroundColor: '#f8f9fa',
+    minHeight: '100%',
     paddingBottom: 20,
   },
   headerContainer: {
     marginBottom: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   headerGradient: {
     paddingTop: 30,
@@ -215,45 +315,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   headerContent: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: "center",
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
     marginBottom: 6,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.8)",
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
-    textAlign: "center",
+    textAlign: 'center',
   },
   statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: 15,
     marginBottom: 25,
     marginTop: -25,
   },
   statCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     padding: 15,
     borderRadius: 12,
-    width: "48%",
-    shadowColor: "#000",
+    width: '48%',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -263,8 +363,8 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 10,
   },
   statInfo: {
@@ -272,32 +372,32 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
+    fontWeight: '700',
+    color: '#333',
   },
   statLabel: {
     fontSize: 12,
-    color: "#718096",
+    color: '#718096',
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 15,
     paddingHorizontal: 15,
-    color: "#333",
+    color: '#333',
   },
   sectionCard: {
     paddingHorizontal: 15,
     paddingVertical: 5,
   },
   optionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -310,8 +410,8 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 15,
   },
   btnTextContainer: {
@@ -319,52 +419,52 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 2,
   },
   btnSubText: {
     fontSize: 12,
-    color: "#718096",
+    color: '#718096',
   },
   footer: {
-    alignItems: "center",
+    alignItems: 'center',
     padding: 20,
   },
   footerText: {
     fontSize: 12,
-    color: "#718096",
+    color: '#718096',
   },
   categoryContainer: {
     paddingHorizontal: 15,
   },
   categoryCard: {
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 15,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
   },
   categoryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   categoryName: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+    fontWeight: '600',
+    color: '#333',
   },
   actionIcons: {
-    flexDirection: "row",
+    flexDirection: 'row',
   },
   editIcon: {
-    backgroundColor: "#e9d5ff",
+    backgroundColor: '#e9d5ff',
     padding: 8,
     borderRadius: 20,
     marginLeft: 8,
@@ -374,25 +474,35 @@ const styles = StyleSheet.create({
   },
   subcategoriesLabel: {
     fontSize: 12,
-    color: "#718096",
+    color: '#718096',
     marginBottom: 6,
   },
   chipContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   chip: {
-    backgroundColor: "#EFF3FE",
+    backgroundColor: '#EFF3FE',
     borderRadius: 20,
     paddingVertical: 4,
     paddingHorizontal: 10,
     margin: 2,
     borderWidth: 1,
-    borderColor: "#D4D8F9",
+    borderColor: '#D4D8F9',
   },
   chipText: {
     fontSize: 12,
-    color: "#4A00E0",
+    color: '#4A00E0',
+  },
+  subSubChip: {
+    backgroundColor: '#E8F2FF',
+    borderColor: '#C7E0FF',
+    marginLeft: 10,
+  },
+  subSubChipText: {
+    fontSize: 11,
+    color: '#8E2DE2',
+    fontStyle: 'italic',
   },
 });
 

@@ -251,3 +251,17 @@ Toast.show({
   text1: 'Custom',
   text2: 'This is a custom toast',
 });
+
+Debugging Errors:
+"Analyze this error message and provide a solution:
+TypeError: Cannot read properties of undefined (reading 'map') in React when mapping over state.
+Also, explain why the error occurred and suggest best practices to avoid it"
+
+Genrating React Components:
+Generate a clean and resuable React Component for a search bar with autocomplete suggestions.
+use tailwind css for styling and make it responsive
+
+optimizing code Performance:
+Optimize the below Python function that finds prime numbers upto a given number.
+the current implementation is slow for large inputs
+Insert your code here
