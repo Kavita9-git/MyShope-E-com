@@ -32,6 +32,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import DisplayMessage from "../Message/DisplayMessage";
 import { getAllProducts } from "../../redux/features/auth/productActions";
+import { createImageSource } from "../../utils/imageUtils";
 
 const { width } = Dimensions.get("window");
 
@@ -47,6 +48,8 @@ const ProductsCard = ({ p }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   // Get cart loading state from Redux
   const { loading: cartLoading, error: cartError } = useSelector(
@@ -286,17 +289,29 @@ const ProductsCard = ({ p }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 0.6 }}
           />
-          <Image
-            // source={{
-            //   uri: `https://nodejsapp-hfpl.onrender.com${p?.images[0]?.url}`,
-            // }}
-            source={{
-              uri: p?.images[0]?.url.startsWith("http")
-                ? p?.images[0]?.url
-                : `https://nodejsapp-hfpl.onrender.com${p?.images[0]?.url}`,
-            }}
-            style={styles.cardImage}
-          />
+          {imageError ? (
+            <View style={[styles.cardImage, styles.imagePlaceholder]}>
+              <Feather name="image" size={40} color="#ccc" />
+              <Text style={styles.imageErrorText}>Image not available</Text>
+            </View>
+          ) : (
+            <Image
+              source={createImageSource(p?.images?.[0]?.url)}
+              style={styles.cardImage}
+              onLoadStart={() => setImageLoading(true)}
+              onLoadEnd={() => setImageLoading(false)}
+              onError={() => {
+                setImageError(true);
+                setImageLoading(false);
+              }}
+              cache="force-cache"
+            />
+          )}
+          {imageLoading && (
+            <View style={styles.imageLoadingOverlay}>
+              <ActivityIndicator size="small" color="#1e3c72" />
+            </View>
+          )}
 
           {/* Category Badge */}
           <View style={styles.categoryBadge}>
@@ -421,11 +436,7 @@ const ProductsCard = ({ p }) => {
             {/* Header with product image and close button */}
             <View style={styles.modalHeader}>
               <Image
-                source={{
-                  uri: p?.images[0]?.url.startsWith("http")
-                    ? p?.images[0]?.url
-                    : `https://nodejsapp-hfpl.onrender.com${p?.images[0]?.url}`,
-                }}
+                source={createImageSource(p?.images?.[0]?.url)}
                 style={styles.modalProductImage}
               />
               <View style={styles.modalHeaderContent}>
@@ -602,11 +613,7 @@ const ProductsCard = ({ p }) => {
             {/* Header with product image and close button */}
             <View style={styles.modalHeader}>
               <Image
-                source={{
-                  uri: p?.images[0]?.url.startsWith("http")
-                    ? p?.images[0]?.url
-                    : `https://nodejsapp-hfpl.onrender.com${p?.images[0]?.url}`,
-                }}
+                source={createImageSource(p?.images?.[0]?.url)}
                 style={styles.modalProductImage}
               />
               <View style={styles.modalHeaderContent}>
@@ -1111,6 +1118,28 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 14,
     textAlign: "center",
+  },
+  imagePlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+  },
+  imageErrorText: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  imageLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.8)",
+    zIndex: 3,
   },
 });
 
