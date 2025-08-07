@@ -53,6 +53,8 @@ const CreateProduct = () => {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [availableSubcategories, setAvailableSubcategories] = useState([]);
+  const [subSubcategory, setSubSubcategory] = useState('');
+  const [availableSubSubcategories, setAvailableSubSubcategories] = useState([]);
   const [generalImage, setGeneralImage] = useState('');
   const [colors, setColors] = useState([]);
   const [selectedColor, setSelectedColor] = useState('');
@@ -136,20 +138,136 @@ const CreateProduct = () => {
 
   // Update subcategories when category changes
   useEffect(() => {
+    console.log('🔍 Category changed, processing subcategories...');
+    console.log('Selected category ID:', category);
+    console.log('All available categories:', categories);
+    
     if (category) {
       const selectedCategory = categories.find(cat => cat._id === category);
-      if (selectedCategory && selectedCategory.subcategories) {
-        setAvailableSubcategories(selectedCategory.subcategories);
-        setSubcategory(''); // Reset subcategory when category changes
+      console.log('🎯 Found selected category:', selectedCategory);
+      
+      if (selectedCategory) {
+        console.log('📂 Category subcategories raw:', selectedCategory.subcategories);
+        console.log('📂 Subcategories type:', typeof selectedCategory.subcategories);
+        console.log('📂 Subcategories length:', selectedCategory.subcategories?.length);
+        
+        if (selectedCategory.subcategories && selectedCategory.subcategories.length > 0) {
+          // Handle both old and new data formats
+          const subcategoryNames = selectedCategory.subcategories
+            .map(subcat => {
+              console.log('Processing subcat:', subcat);
+              // Handle new format: {name: 'Gaming', subSubCategories: [...]}
+              if (typeof subcat === 'object' && subcat.name) {
+                return subcat.name;
+              }
+              // Handle flawed object-like string format
+              else if (typeof subcat === 'object') {
+                // Convert individual character keys back into a string for subcategory name
+                const nameArray = Object.entries(subcat)
+                  .filter(([key, _]) => !isNaN(key))
+                  .sort(([a,], [b,]) => a - b)
+                  .map(([_, value]) => value);
+                return nameArray.join('');
+              }
+              // Handle old format: direct string values
+              else if (typeof subcat === 'string') {
+                return subcat;
+              }
+              // Fallback
+              return null;
+            })
+            .filter(name => name && name.trim() !== '');
+          
+          console.log('✅ Extracted subcategory names:', subcategoryNames);
+          setAvailableSubcategories(subcategoryNames);
+          setSubcategory(''); // Reset subcategory when category changes
+          setSubSubcategory(''); // Reset sub-subcategory when category changes
+          setAvailableSubSubcategories([]); // Clear sub-subcategories
+        } else {
+          console.log('❌ No subcategories found for category:', selectedCategory.category);
+          setAvailableSubcategories([]);
+          setSubcategory('');
+          setSubSubcategory('');
+          setAvailableSubSubcategories([]);
+        }
       } else {
+        console.log('❌ Selected category not found in categories list');
         setAvailableSubcategories([]);
         setSubcategory('');
+        setSubSubcategory('');
+        setAvailableSubSubcategories([]);
       }
     } else {
+      console.log('🔄 No category selected, clearing subcategories');
       setAvailableSubcategories([]);
       setSubcategory('');
+      setSubSubcategory('');
+      setAvailableSubSubcategories([]);
     }
   }, [category, categories]);
+
+  // Update sub-subcategories when subcategory changes
+  useEffect(() => {
+    console.log('🔍 Subcategory changed, processing sub-subcategories...');
+    console.log('Selected subcategory:', subcategory);
+    console.log('Selected category ID:', category);
+    
+    if (subcategory && category) {
+      const selectedCategory = categories.find(cat => cat._id === category);
+      if (selectedCategory && selectedCategory.subcategories) {
+        // Find the selected subcategory object
+        const selectedSubcategory = selectedCategory.subcategories.find(subcat => {
+          // Handle new format: {name: 'Gaming', subSubCategories: [...]}
+          if (typeof subcat === 'object' && subcat.name) {
+            return subcat.name === subcategory;
+          }
+          // Handle flawed object-like string format
+          else if (typeof subcat === 'object') {
+            const nameArray = Object.entries(subcat)
+              .filter(([key, _]) => !isNaN(key))
+              .sort(([a,], [b,]) => a - b)
+              .map(([_, value]) => value);
+            return nameArray.join('') === subcategory;
+          }
+          // Handle old format: direct string values
+          else if (typeof subcat === 'string') {
+            return subcat === subcategory;
+          }
+          return false;
+        });
+        
+        console.log('🎯 Found selected subcategory object:', selectedSubcategory);
+        
+        if (selectedSubcategory && selectedSubcategory.subSubCategories && selectedSubcategory.subSubCategories.length > 0) {
+          // Extract sub-subcategory names
+          const subSubcategoryNames = selectedSubcategory.subSubCategories
+            .map(subSubcat => {
+              console.log('Processing sub-subcat:', subSubcat);
+              if (typeof subSubcat === 'object' && subSubcat.name) {
+                return subSubcat.name;
+              }
+              else if (typeof subSubcat === 'string') {
+                return subSubcat;
+              }
+              return null;
+            })
+            .filter(name => name && name.trim() !== '');
+          
+          console.log('✅ Extracted sub-subcategory names:', subSubcategoryNames);
+          setAvailableSubSubcategories(subSubcategoryNames);
+          setSubSubcategory(''); // Reset sub-subcategory when subcategory changes
+        } else {
+          console.log('❌ No sub-subcategories found for subcategory:', subcategory);
+          setAvailableSubSubcategories([]);
+          setSubSubcategory('');
+        }
+      }
+    } else {
+      console.log('🔄 No subcategory selected, clearing sub-subcategories');
+      setAvailableSubSubcategories([]);
+      setSubSubcategory('');
+    }
+  }, [subcategory, category, categories]);
 
   const resetForm = () => {
     setName('');
@@ -157,8 +275,10 @@ const CreateProduct = () => {
     setPrice('');
     setStock('');
     setCategory('');
-    setSubcategory('');
-    setAvailableSubcategories([]);
+      setSubcategory('');
+      setAvailableSubcategories([]);
+      setSubSubcategory('');
+      setAvailableSubSubcategories([]);
     setGeneralImage('');
     setColors([]);
     setSelectedColor('');
@@ -383,6 +503,7 @@ const CreateProduct = () => {
     formData.append('stock', finalStock);
     formData.append('category', category);
     formData.append('subcategory', subcategory);
+    formData.append('subSubcategory', subSubcategory);
     formData.append('colors', JSON.stringify(colors));
     formData.append('isFeatured', isFeatured);
     formData.append('isTrending', isTrending);
@@ -561,6 +682,35 @@ const CreateProduct = () => {
                       <Picker.Item label="Select Subcategory" value="" />
                       {availableSubcategories.map((subcat, index) => (
                         <Picker.Item key={index} label={subcat} value={subcat} />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {subcategory && availableSubSubcategories.length > 0 && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Sub-Subcategory</Text>
+              <View style={styles.pickerContainer}>
+                <View style={styles.inputWithIcon}>
+                  <MaterialIcons
+                    name="folder-open"
+                    size={22}
+                    color="#666"
+                    style={styles.inputIcon}
+                  />
+                  <View style={styles.pickerWrapper}>
+                    <Picker
+                      selectedValue={subSubcategory}
+                      onValueChange={setSubSubcategory}
+                      style={styles.picker}
+                      dropdownIconColor="#666"
+                    >
+                      <Picker.Item label="Select Sub-Subcategory" value="" />
+                      {availableSubSubcategories.map((subSubcat, index) => (
+                        <Picker.Item key={index} label={subSubcat} value={subSubcat} />
                       ))}
                     </Picker>
                   </View>

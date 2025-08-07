@@ -72,6 +72,10 @@ const UpdateImageProducts = ({ navigation, route }) => {
   // const { user } = useSelector((state) => state.user);
   // console.log(user);
 
+  console.log('=== ROUTE DEBUG ===');
+  console.log('Route params:', route.params);
+  console.log('Route params id:', route.params?.id);
+
   const { categories = '' } = useSelector(state => state.category);
   const { products = '', message = '', error = '' } = useSelector(state => state.product);
   // console.log("categories :", categories);
@@ -80,10 +84,17 @@ const UpdateImageProducts = ({ navigation, route }) => {
   useEffect(() => {
     dispatch(getAllCategories());
     dispatch(getAllProducts());
-    fetchProducts(route.params.id);
-    // console.log('id :', id);
+    // Don't fetch products immediately, wait for categories to load
     setCatData(categories);
   }, []);
+
+  // Separate useEffect to handle product fetching after categories are loaded
+  useEffect(() => {
+    if (categories && categories.length > 0 && route.params && route.params.id) {
+      console.log('Categories loaded, now fetching product:', route.params.id);
+      fetchProducts(route.params.id);
+    }
+  }, [categories, route.params]);
 
   useEffect(() => {
     if (message?.includes('Updated')) {
@@ -137,6 +148,9 @@ const UpdateImageProducts = ({ navigation, route }) => {
   const [categoryId, setCategoryId] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [availableSubcategories, setAvailableSubcategories] = useState([]);
+  const [subSubcategory, setSubSubcategory] = useState('');
+  const [availableSubSubcategories, setAvailableSubSubcategories] = useState([]);
+  
   const [productId, setProductId] = useState('');
   const [generalImage, setGeneralImage] = useState('');
   const [colorImages, setColorImages] = useState([]); // Holds colors with images & sizes
@@ -151,20 +165,127 @@ const UpdateImageProducts = ({ navigation, route }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [getAllProductsData, setGetAllProductsData] = useState([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  
+  // New state for multiple images (non-clothing categories)
+  const [multipleImages, setMultipleImages] = useState([]);
+  const [changedMultipleImages, setChangedMultipleImages] = useState([]);
+  
+  // Helper function to check if category is clothing
+  const isClothingCategory = (categoryName) => {
+    if (!categoryName) return false;
+    const clothingCategories = ['clothing', 'clothes', 'apparel', 'fashion', 'garments'];
+    return clothingCategories.some(cat => 
+      categoryName.toLowerCase().includes(cat.toLowerCase())
+    );
+  };
 
   // Update subcategories when category changes
   useEffect(() => {
     if (categoryId) {
       const selectedCategory = categories.find(cat => cat._id === categoryId);
       if (selectedCategory && selectedCategory.subcategories) {
-        setAvailableSubcategories(selectedCategory.subcategories);
+        // Extract subcategory names properly
+        const subcategoryNames = selectedCategory.subcategories.map(subcat => {
+          // Handle different data formats
+          if (typeof subcat === 'string') {
+            return subcat;
+          } else if (subcat && subcat.name) {
+            return subcat.name;
+          } else if (typeof subcat === 'object' && subcat !== null) {
+            // Handle the corrupted format where strings are stored as objects with numeric keys
+            const keys = Object.keys(subcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+            if (keys.length > 0) {
+              return keys.map(key => subcat[key]).join('');
+            }
+          }
+          return String(subcat);
+        });
+        setAvailableSubcategories(subcategoryNames);
       } else {
         setAvailableSubcategories([]);
       }
+      // Only reset subcategory and sub-subcategory if we're not loading a product from route params
+      if (!productId) {
+        setSubcategory(''); // Reset subcategory when category changes
+        setSubSubcategory(''); // Reset sub-subcategory when category changes
+        setAvailableSubSubcategories([]);
+      }
     } else {
       setAvailableSubcategories([]);
+      if (!productId) {
+        setAvailableSubSubcategories([]);
+      }
     }
-  }, [categoryId, categories]);
+  }, [categoryId, categories, productId]);
+
+  // Update sub-subcategories when subcategory changes (but not when loading product)
+  useEffect(() => {
+    // Skip if we don't have the necessary data
+    if (!categoryId || !categories.length) return;
+    
+    console.log('Subcategory effect triggered with:', subcategory, categoryId, 'productId:', productId);
+    
+    if (subcategory && categoryId) {
+      const selectedCategory = categories.find(cat => cat._id === categoryId);
+      if (selectedCategory && selectedCategory.subcategories) {
+        // Find the selected subcategory object
+        let selectedSubcategory = null;
+        
+        for (const subcat of selectedCategory.subcategories) {
+          let subcatName = '';
+          if (typeof subcat === 'string') {
+            subcatName = subcat;
+          } else if (subcat && subcat.name) {
+            subcatName = subcat.name;
+          } else if (typeof subcat === 'object' && subcat !== null) {
+            const keys = Object.keys(subcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+            if (keys.length > 0) {
+              subcatName = keys.map(key => subcat[key]).join('');
+            }
+          }
+          
+          if (subcatName === subcategory) {
+            selectedSubcategory = subcat;
+            break;
+          }
+        }
+
+        if (selectedSubcategory && selectedSubcategory.subSubCategories && selectedSubcategory.subSubCategories.length > 0) {
+          // Extract sub-subcategory names
+          const subSubcategoryNames = selectedSubcategory.subSubCategories.map(subSubcat => {
+            if (typeof subSubcat === 'string') {
+              return subSubcat;
+            } else if (subSubcat && subSubcat.name) {
+              return subSubcat.name;
+            } else if (typeof subSubcat === 'object' && subSubcat !== null) {
+              const keys = Object.keys(subSubcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+              if (keys.length > 0) {
+                return keys.map(key => subSubcat[key]).join('');
+              }
+            }
+            return String(subSubcat);
+          });
+          console.log('Setting sub-subcategories from subcategory effect:', subSubcategoryNames);
+          setAvailableSubSubcategories(subSubcategoryNames);
+        } else {
+          console.log('No sub-subcategories found, clearing');
+          setAvailableSubSubcategories([]);
+        }
+        // Only reset sub-subcategory when manually changing subcategory (not when loading product)
+        if (!productId) {
+          setSubSubcategory(''); // Reset sub-subcategory when subcategory changes
+        }
+      } else {
+        console.log('No selected category or subcategories, clearing');
+        setAvailableSubSubcategories([]);
+      }
+    } else if (subcategory === '' && !productId) {
+      // Only clear if subcategory is explicitly empty and we're not loading a product
+      console.log('Subcategory is empty and no product loaded, clearing sub-subcategories');
+      setAvailableSubSubcategories([]);
+      setSubSubcategory('');
+    }
+  }, [subcategory, categoryId, categories, productId]);
 
   //Product Create
   const handleUploadChanges = () => {
@@ -180,6 +301,11 @@ const UpdateImageProducts = ({ navigation, route }) => {
     // Add subcategory if changed
     if (subcategory) {
       formData.append('subcategory', subcategory);
+    }
+
+    // Add sub-subcategory if changed
+    if (subSubcategory) {
+      formData.append('subSubcategory', subSubcategory);
     }
 
     // Add general image if changed
@@ -218,6 +344,31 @@ const UpdateImageProducts = ({ navigation, route }) => {
         }
       });
     });
+
+    // Add multiple images for non-clothing categories
+    if (!isClothingCategory(category) && changedMultipleImages.length > 0) {
+      changedMultipleImages.forEach((img, i) => {
+        if (img.uri && img.uri.startsWith('file')) {
+          const ext = img.uri.split('.').pop();
+          formData.append('multipleImages', {
+            uri: img.uri,
+            name: img.fileName || `image_${i}.${ext}`,
+            type: `image/${ext}`,
+          });
+        }
+      });
+      
+      // Prepare multipleImages JSON metadata
+      const multipleImagesMetadata = changedMultipleImages.map(img => ({
+        fileName: img.fileName || 'image',
+        fileSize: img.fileSize,
+        width: img.width,
+        height: img.height,
+        localPath: img.localPath || img.uri,
+      }));
+      
+      formData.append('multipleImagesMetadata', JSON.stringify(multipleImagesMetadata));
+    }
 
     // Debug current state
     console.log(
@@ -307,6 +458,14 @@ const UpdateImageProducts = ({ navigation, route }) => {
       return p?._id === itemValue;
     });
 
+    console.log('=== PRODUCT FETCH DEBUG ===');
+    console.log('Product ID:', itemValue);
+    console.log('Found Product:', getProduct);
+    console.log('Product subcategory:', getProduct?.subcategory);
+    console.log('Product subSubcategory:', getProduct?.subSubcategory);
+    console.log('Product category:', getProduct?.category);
+    console.log('Available categories:', categories.length);
+
     const enrichedColors = (getProduct?.colors || []).map(c => ({
       ...c,
       colorCode:
@@ -326,19 +485,122 @@ const UpdateImageProducts = ({ navigation, route }) => {
     setCategory(getProduct?.category?.category);
     setCategoryId(getProduct?.category?._id);
     setSubcategory(getProduct?.subcategory || '');
+    setSubSubcategory(getProduct?.subSubcategory || ''); // Set sub-subcategory from product data
     setGeneralImage(getProduct?.images[0]?.url || getProduct?.images[0] || '');
     setColorImages(enrichedColors);
     setChangedColorImages(enrichedColors);
+    
+    // Handle multiple images for non-clothing categories
+    if (getProduct?.multipleImages && Array.isArray(getProduct.multipleImages)) {
+      const loadedMultipleImages = getProduct.multipleImages.map(img => ({
+        uri: img.cloudinaryUrl || img.localPath || img.url,
+        fileName: img.fileName || 'image',
+        fileSize: img.fileSize,
+        width: img.width,
+        height: img.height,
+        localPath: img.localPath,
+        cloudinaryUrl: img.cloudinaryUrl,
+        ...img
+      }));
+      setMultipleImages(loadedMultipleImages);
+      setChangedMultipleImages(loadedMultipleImages);
+    } else {
+      // Clear multiple images if none exist
+      setMultipleImages([]);
+      setChangedMultipleImages([]);
+    }
+    
     setIsVisible(true);
+
+    console.log('Setting product states - subcategory:', getProduct?.subcategory, 'subSubcategory:', getProduct?.subSubcategory);
 
     // Update available subcategories based on selected category
     if (getProduct?.category?._id) {
       const selectedCategory = categories.find(cat => cat._id === getProduct.category._id);
+      console.log('Selected category found:', selectedCategory);
+      console.log('Selected category subcategories:', selectedCategory?.subcategories);
+      
       if (selectedCategory && selectedCategory.subcategories) {
-        setAvailableSubcategories(selectedCategory.subcategories);
+        // Extract subcategory names properly
+        const subcategoryNames = selectedCategory.subcategories.map(subcat => {
+          if (typeof subcat === 'string') {
+            return subcat;
+          } else if (subcat && subcat.name) {
+            return subcat.name;
+          } else if (typeof subcat === 'object' && subcat !== null) {
+            const keys = Object.keys(subcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+            if (keys.length > 0) {
+              return keys.map(key => subcat[key]).join('');
+            }
+          }
+          return String(subcat);
+        });
+        
+        console.log('Extracted subcategory names:', subcategoryNames);
+        setAvailableSubcategories(subcategoryNames);
+        
+        // If product has a subcategory, find and set available sub-subcategories
+        if (getProduct?.subcategory) {
+          console.log('Product has subcategory:', getProduct.subcategory);
+          console.log('Looking for matching subcategory in:', selectedCategory.subcategories);
+          
+          for (const subcat of selectedCategory.subcategories) {
+            let subcatName = '';
+            if (typeof subcat === 'string') {
+              subcatName = subcat;
+            } else if (subcat && subcat.name) {
+              subcatName = subcat.name;
+            } else if (typeof subcat === 'object' && subcat !== null) {
+              const keys = Object.keys(subcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+              if (keys.length > 0) {
+                subcatName = keys.map(key => subcat[key]).join('');
+              }
+            }
+            
+            console.log('Comparing subcatName:', subcatName, 'with product subcategory:', getProduct.subcategory);
+            
+            if (subcatName === getProduct.subcategory) {
+              console.log('Found matching subcategory:', subcat);
+              console.log('SubSubCategories available:', subcat.subSubCategories);
+              
+              if (subcat && subcat.subSubCategories && subcat.subSubCategories.length > 0) {
+                const subSubcategoryNames = subcat.subSubCategories.map(subSubcat => {
+                  if (typeof subSubcat === 'string') {
+                    return subSubcat;
+                  } else if (subSubcat && subSubcat.name) {
+                    return subSubcat.name;
+                  } else if (typeof subSubcat === 'object' && subSubcat !== null) {
+                    const keys = Object.keys(subSubcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+                    if (keys.length > 0) {
+                      return keys.map(key => subSubcat[key]).join('');
+                    }
+                  }
+                  return String(subSubcat);
+                });
+                
+                console.log('Extracted sub-subcategory names:', subSubcategoryNames);
+                console.log('Setting availableSubSubcategories directly:', subSubcategoryNames);
+                setAvailableSubSubcategories(subSubcategoryNames);
+              } else {
+                console.log('No sub-subcategories found for this subcategory');
+                setAvailableSubSubcategories([]);
+              }
+              break;
+            }
+          }
+        } else {
+          console.log('Product has no subcategory');
+          setAvailableSubSubcategories([]);
+        }
       } else {
+        console.log('No subcategories found in selected category');
         setAvailableSubcategories([]);
+        setAvailableSubSubcategories([]);
       }
+    } else {
+      console.log('No category found for product');
+      setAvailableSubcategories([]);
+      setAvailableSubSubcategories([]);
     }
 
     // console.log('getProduct?.colors ', getProduct?.colors);
@@ -488,27 +750,82 @@ const UpdateImageProducts = ({ navigation, route }) => {
               </View>
             </View>
 
-            {availableSubcategories.length > 0 && (
+            {(availableSubcategories.length > 0 || categoryId || subcategory) && (
               <View style={styles.pickerSection}>
                 <Text style={styles.sectionTitle}>
                   <Icon name="folder-multiple" size={16} color="#555" /> Select Subcategory
                 </Text>
-                <View style={styles.pickerWrapper}>
-                  <Picker
-                    selectedValue={subcategory}
-                    onValueChange={itemValue => {
-                      setSubcategory(itemValue);
-                      handleFieldChange('subcategory', itemValue);
-                    }}
-                    style={styles.picker}
-                    dropdownIconColor="#3b5998"
-                  >
-                    <Picker.Item label="-- Select Subcategory --" value="" />
-                    {availableSubcategories.map((subcat, index) => (
-                      <Picker.Item key={index} label={subcat} value={subcat} />
-                    ))}
-                  </Picker>
-                </View>
+                {availableSubcategories.length > 0 ? (
+                  <View style={styles.pickerWrapper}>
+                    <Picker
+                      selectedValue={subcategory}
+                      onValueChange={itemValue => {
+                        setSubcategory(itemValue);
+                        handleFieldChange('subcategory', itemValue);
+                      }}
+                      style={styles.picker}
+                      dropdownIconColor="#3b5998"
+                    >
+                      <Picker.Item label="-- Select Subcategory --" value="" />
+                      {availableSubcategories.map((subcat, index) => (
+                        <Picker.Item key={index} label={subcat} value={subcat} />
+                      ))}
+                    </Picker>
+                  </View>
+                ) : (
+                  <Text style={styles.noItemsText}>
+                    No subcategories available for this category
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {(availableSubSubcategories.length > 0 || subcategory || subSubcategory) && (
+              <View style={styles.pickerSection}>
+                <Text style={styles.sectionTitle}>
+                  <Icon name="file-tree" size={16} color="#555" /> Select Sub-subcategory
+                </Text>
+                {availableSubSubcategories.length > 0 ? (
+                  <View style={styles.pickerWrapper}>
+                    <Picker
+                      selectedValue={subSubcategory}
+                      onValueChange={itemValue => {
+                        setSubSubcategory(itemValue);
+                        handleFieldChange('subSubcategory', itemValue);
+                      }}
+                      style={styles.picker}
+                      dropdownIconColor="#3b5998"
+                    >
+                      <Picker.Item label="-- Select Sub-subcategory --" value="" />
+                      {availableSubSubcategories.map((subSubcat, index) => (
+                        <Picker.Item key={index} label={subSubcat} value={subSubcat} />
+                      ))}
+                    </Picker>
+                  </View>
+                ) : subcategory ? (
+                  <Text style={styles.noItemsText}>
+                    No sub-subcategories available for this subcategory
+                  </Text>
+                ) : null}
+
+                {/* Selected Sub-subcategory Display */}
+                {subSubcategory && (
+                  <View style={styles.selectedSubSubcategoryContainer}>
+                    <Text style={styles.selectedSubSubcategoryLabel}>
+                      Selected Sub-subcategory:
+                    </Text>
+                    <View style={styles.selectedSubSubcategoryBox}>
+                      <Icon name="folder-check" size={18} color="#28a745" />
+                      <Text style={styles.selectedSubSubcategoryText}>{subSubcategory}</Text>
+                      <TouchableOpacity
+                        style={styles.clearSubSubcategoryButton}
+                        onPress={() => setSubSubcategory('')}
+                      >
+                        <Icon name="close-circle" size={16} color="#dc3545" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 
@@ -549,14 +866,17 @@ const UpdateImageProducts = ({ navigation, route }) => {
             ) : null}
           </View>
 
-          <View style={styles.colorSection}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionHeaderText}>Color Variants</Text>
-              <TouchableOpacity onPress={() => setShowColorPicker(true)} style={styles.addColorBtn}>
-                <Icon name="palette-swatch" size={16} color="#fff" />
-                <Text style={styles.addColorBtnText}>Add Color</Text>
-              </TouchableOpacity>
-            </View>
+          {/* Conditional rendering based on category */}
+          {isClothingCategory(category) ? (
+            // Color Variants Section for Clothing
+            <View style={styles.colorSection}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeaderText}>Color Variants</Text>
+                <TouchableOpacity onPress={() => setShowColorPicker(true)} style={styles.addColorBtn}>
+                  <Icon name="palette-swatch" size={16} color="#fff" />
+                  <Text style={styles.addColorBtnText}>Add Color</Text>
+                </TouchableOpacity>
+              </View>
 
             {showColorPicker && (
               <View style={styles.colorPickerCard}>
@@ -903,6 +1223,147 @@ const UpdateImageProducts = ({ navigation, route }) => {
               </View>
             ))}
           </View>
+          ) : (
+            // Multiple Images Section for Non-Clothing Categories
+            <View style={styles.multipleImagesSection}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeaderText}>Product Images</Text>
+                <TouchableOpacity 
+                  onPress={async () => {
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      allowsMultipleSelection: true,
+                      quality: 1,
+                    });
+
+                    if (!result.canceled) {
+                      const selectedImages = result.assets.map(asset => ({
+                        uri: asset.uri,
+                        fileName: asset.fileName || asset.uri.split('/').pop(),
+                        fileSize: asset.fileSize,
+                        width: asset.width,
+                        height: asset.height,
+                        localPath: asset.uri,
+                      }));
+                      
+                      setMultipleImages([...multipleImages, ...selectedImages]);
+                      setChangedMultipleImages([...changedMultipleImages, ...selectedImages]);
+                    }
+                  }} 
+                  style={styles.addImageBtn}
+                >
+                  <Icon name="image-plus" size={16} color="#fff" />
+                  <Text style={styles.addImageBtnText}>Add Images</Text>
+                </TouchableOpacity>
+              </View>
+
+              {multipleImages.length > 0 && (
+                <View style={styles.multipleImagesContainer}>
+                  <Text style={styles.subSectionTitle}>Selected Images ({multipleImages.length})</Text>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.imagesScrollView}
+                  >
+                    {multipleImages.map((img, index) => (
+                      <View key={index} style={styles.multipleImageItem}>
+                        <Image
+                          source={{
+                            uri: img.uri || img.cloudinaryUrl || 
+                              (typeof img === 'string' && (img.startsWith('http') || img.startsWith('file')) 
+                                ? img 
+                                : `https://nodejsapp-hfpl.onrender.com${img}`)
+                          }}
+                          style={styles.multipleImage}
+                        />
+                        <View style={styles.multipleImageActions}>
+                          <TouchableOpacity
+                            onPress={async () => {
+                              const result = await ImagePicker.launchImageLibraryAsync({
+                                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                                quality: 1,
+                              });
+                          
+                              if (!result.canceled) {
+                                const newImage = {
+                                  uri: result.assets[0].uri,
+                                  fileName: result.assets[0].fileName || result.assets[0].uri.split('/').pop(),
+                                  fileSize: result.assets[0].fileSize,
+                                  width: result.assets[0].width,
+                                  height: result.assets[0].height,
+                                  localPath: result.assets[0].uri,
+                                };
+                                
+                                const updatedImages = [...multipleImages];
+                                updatedImages[index] = newImage;
+                                setMultipleImages(updatedImages);
+                                setChangedMultipleImages(updatedImages);
+                              }
+                            }}
+                            style={styles.replaceImageBtn}
+                          >
+                            <Icon name="pencil" size={10} color="#fff" />
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            onPress={() => {
+                              const updatedImages = multipleImages.filter((_, i) => i !== index);
+                              setMultipleImages(updatedImages);
+                              setChangedMultipleImages(updatedImages);
+                            }}
+                            style={styles.removeImageBtn}
+                          >
+                            <Icon name="delete" size={10} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                        
+                        <Text style={styles.imageFileName} numberOfLines={1}>
+                          {img.fileName || 'image'}
+                        </Text>
+                      </View>
+                    ))}
+                    
+                    {/* Add more images button within the scroll view */}
+                    <TouchableOpacity
+                      onPress={async () => {
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                          allowsMultipleSelection: true,
+                          quality: 1,
+                        });
+
+                        if (!result.canceled) {
+                          const selectedImages = result.assets.map(asset => ({
+                            uri: asset.uri,
+                            fileName: asset.fileName || asset.uri.split('/').pop(),
+                            fileSize: asset.fileSize,
+                            width: asset.width,
+                            height: asset.height,
+                            localPath: asset.uri,
+                          }));
+                          
+                          setMultipleImages([...multipleImages, ...selectedImages]);
+                          setChangedMultipleImages([...changedMultipleImages, ...selectedImages]);
+                        }
+                      }}
+                      style={styles.addMoreImageCard}
+                    >
+                      <Icon name="image-plus" size={24} color="#3b5998" />
+                      <Text style={styles.addMoreImageText}>Add More</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+              )}
+              
+              {multipleImages.length === 0 && (
+                <View style={styles.emptyImagesContainer}>
+                  <Icon name="image-off-outline" size={48} color="#a0aec0" />
+                  <Text style={styles.emptyImagesText}>No images added yet</Text>
+                  <Text style={styles.emptyImagesSubtext}>Tap "Add Images" to get started</Text>
+                </View>
+              )}
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.btnUpdate}
@@ -1419,6 +1880,135 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 5,
+  },
+  // New styles for enhanced subcategory display
+  noItemsText: {
+    color: '#888',
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  selectedSubSubcategoryContainer: {
+    marginTop: 15,
+  },
+  selectedSubSubcategoryLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  selectedSubSubcategoryBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#d4edda',
+    borderWidth: 1,
+    borderColor: '#28a745',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+  },
+  selectedSubSubcategoryText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#155724',
+    marginLeft: 8,
+  },
+  clearSubSubcategoryButton: {
+    padding: 4,
+  },
+  // Styles for multiple images section (non-clothing categories)
+  multipleImagesSection: {
+    marginBottom: 20,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  multipleImagesContainer: {
+    marginTop: 10,
+  },
+  multipleImageItem: {
+    marginRight: 12,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  multipleImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  multipleImageActions: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    flexDirection: 'row',
+  },
+  replaceImageBtn: {
+    backgroundColor: '#3182ce',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 4,
+  },
+  removeImageBtn: {
+    backgroundColor: '#e53e3e',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  imageFileName: {
+    fontSize: 10,
+    color: '#4a5568',
+    marginTop: 5,
+    textAlign: 'center',
+    maxWidth: 90,
+  },
+  addMoreImageCard: {
+    width: 90,
+    height: 90,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#3182ce',
+    backgroundColor: '#ebf8ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  addMoreImageText: {
+    color: '#3182ce',
+    fontSize: 10,
+    marginTop: 5,
+  },
+  emptyImagesContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyImagesText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4a5568',
+    marginTop: 15,
+    textAlign: 'center',
+  },
+  emptyImagesSubtext: {
+    fontSize: 14,
+    color: '#9ca3af',
+    marginTop: 5,
+    textAlign: 'center',
   },
 });
 

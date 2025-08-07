@@ -123,8 +123,7 @@ const UpdateCategory = ({ route }) => {
 
   // Remove subcategory
   const removeSubcategory = index => {
-    const updatedSubcategories = [...subcategories];
-    updatedSubcategories.splice(index, 1);
+let updatedSubcategories = subcategories.filter((_, subIndex) => subIndex !== index);
     setSubcategories(updatedSubcategories);
     if (activeSubcategoryIndex === index) {
       setActiveSubcategoryIndex(null);
@@ -145,35 +144,44 @@ const UpdateCategory = ({ route }) => {
       return;
     }
 
-    const updatedSubcategories = [...subcategories];
-    const targetSubcategory = updatedSubcategories[subcategoryIndex];
-
-    // Ensure subSubCategories array exists
-    if (!targetSubcategory.subSubCategories) {
-      targetSubcategory.subSubCategories = [];
-    }
-
-    if (
-      targetSubcategory.subSubCategories.some(subSubCat => subSubCat.name === subSubCategory.trim())
-    ) {
-      Toast.show({
-        type: 'error',
-        position: 'top',
-        text1: 'Error!',
-        text2: 'Sub-subcategory already exists in this subcategory',
-      });
-      return;
-    }
-
-    targetSubcategory.subSubCategories.push({ name: subSubCategory.trim() });
+    const updatedSubcategories = subcategories.map((subcat, index) => {
+      if (index === subcategoryIndex) {
+        const existingSubSubCategories = subcat.subSubCategories || [];
+        
+        // Check for duplicate
+        if (existingSubSubCategories.some(subSubCat => subSubCat.name === subSubCategory.trim())) {
+          Toast.show({
+            type: 'error',
+            position: 'top',
+            text1: 'Error!',
+            text2: 'Sub-subcategory already exists in this subcategory',
+          });
+          return subcat; // Return original if duplicate found
+        }
+        
+        return {
+          ...subcat,
+          subSubCategories: [...existingSubSubCategories, { name: subSubCategory.trim() }]
+        };
+      }
+      return { ...subcat, subSubCategories: subcat.subSubCategories ? [...subcat.subSubCategories] : [] };
+    });
+    
     setSubcategories(updatedSubcategories);
     setSubSubCategory('');
   };
 
   // Remove sub-subcategory
   const removeSubSubCategory = (subcategoryIndex, subSubCategoryIndex) => {
-    const updatedSubcategories = [...subcategories];
-    updatedSubcategories[subcategoryIndex].subSubCategories.splice(subSubCategoryIndex, 1);
+    const updatedSubcategories = subcategories.map((subcat, index) => {
+      if (index === subcategoryIndex) {
+        return {
+          ...subcat,
+          subSubCategories: subcat.subSubCategories.filter((_, subIndex) => subIndex !== subSubCategoryIndex)
+        };
+      }
+      return { ...subcat };
+    });
     setSubcategories(updatedSubcategories);
   };
 
@@ -188,7 +196,7 @@ const UpdateCategory = ({ route }) => {
     if (itemValue) {
       const selectedCategory = categories.find(cat => cat._id === itemValue);
       if (selectedCategory && selectedCategory.subcategories) {
-        // Ensure all subcategories have proper structure
+        // Ensure all subcategories have proper structure with deep copying
         const processedSubcategories = selectedCategory.subcategories.map(subcat => {
           if (typeof subcat === 'string') {
             return {
@@ -197,11 +205,17 @@ const UpdateCategory = ({ route }) => {
             };
           } else if (subcat && typeof subcat === 'object') {
             return {
-              name: subcat.name,
-              subSubCategories: subcat.subSubCategories || [],
+              name: subcat.name || '',
+              subSubCategories: subcat.subSubCategories ? 
+                subcat.subSubCategories.map(subSubCat => ({ 
+                  name: subSubCat.name || subSubCat 
+                })) : [],
             };
           }
-          return subcat;
+          return {
+            name: subcat?.name || subcat || '',
+            subSubCategories: [],
+          };
         });
         setSubcategories(processedSubcategories);
       } else {

@@ -116,26 +116,40 @@ const ProductDetails = ({ route, navigation }) => {
     setPtDetails(getProduct);
     console.log('getProduct :', getProduct);
 
+    // Check if product is clothing category
+    const isClothing = getProduct?.category?.category?.toLowerCase() === 'clothes';
+    
     // If product has colors, set the first color as selected
     if (getProduct?.colors && getProduct.colors.length > 0) {
       setSelectedColor(getProduct.colors[0]);
-      setCurrentImages(
-        getProduct.colors[0].images?.length > 0
-          ? getProduct.colors[0].images.map(img => ({
-              url: `https://nodejsapp-hfpl.onrender.com${img}`,
-            }))
-          : getProduct.images
-      );
+      
+      // Handle color images based on category type
+      if (isClothing && getProduct.colors[0].images?.length > 0) {
+        // For clothing: color images are URL strings, need server prefix
+        setCurrentImages(
+          getProduct.colors[0].images.map(img => ({
+            url: img.startsWith('http') ? img : `https://nodejsapp-hfpl.onrender.com${img}`,
+          }))
+        );
+      } else {
+        // For non-clothing: fallback to general images or multiple images
+        const imagesToUse = getProduct.multipleImages?.length > 0 
+          ? getProduct.multipleImages 
+          : (getProduct.images || []);
+        setCurrentImages(imagesToUse);
+      }
 
-      // Set available sizes for the selected color
-      if (getProduct.colors[0].sizes && getProduct.colors[0].sizes.length > 0) {
+      // Set available sizes for the selected color (only for clothing)
+      if (isClothing && getProduct.colors[0].sizes && getProduct.colors[0].sizes.length > 0) {
         setAvailableSizes(getProduct.colors[0].sizes);
         setSelectedSize(getProduct.colors[0].sizes[0]);
-        // console.log("color.sizes :", color.sizes);
       }
     } else {
-      // If no colors, use default product images
-      setCurrentImages(getProduct?.images || []);
+      // If no colors, use multiple images first, then fallback to general images
+      const imagesToUse = getProduct?.multipleImages?.length > 0 
+        ? getProduct.multipleImages 
+        : (getProduct?.images || []);
+      setCurrentImages(imagesToUse);
     }
 
     // Set reviews
@@ -162,21 +176,27 @@ const ProductDetails = ({ route, navigation }) => {
     setCurrentIndex(0);
     scrollRef.current?.scrollTo({ x: 0, animated: true });
 
-    // Update images based on the selected color
-    if (color.images && color.images.length > 0) {
-      // Convert string array to object array with url property
+    // Check if product is clothing category
+    const isClothing = pDetails?.category?.category?.toLowerCase() === 'clothes';
+
+    // Update images based on the selected color and category type
+    if (isClothing && color.images && color.images.length > 0) {
+      // For clothing: color images are URL strings, need server prefix
       setCurrentImages(
         color.images.map(img => ({
-          url: `https://nodejsapp-hfpl.onrender.com${img}`,
+          url: img.startsWith('http') ? img : `https://nodejsapp-hfpl.onrender.com${img}`,
         }))
       );
     } else {
-      // If no color-specific images, fallback to default product images
-      setCurrentImages(pDetails?.images || []);
+      // For non-clothing: fallback to multiple images or general images
+      const imagesToUse = pDetails?.multipleImages?.length > 0 
+        ? pDetails.multipleImages 
+        : (pDetails?.images || []);
+      setCurrentImages(imagesToUse);
     }
 
-    // Update available sizes based on the selected color with current stock levels
-    if (color.sizes && color.sizes.length > 0) {
+    // Update available sizes based on the selected color (only for clothing)
+    if (isClothing && color.sizes && color.sizes.length > 0) {
       // Find the updated color data to get current stock levels
       const updatedColor = pDetails.colors?.find(c => c.colorId === color.colorId) || color;
       setAvailableSizes(updatedColor.sizes || color.sizes);

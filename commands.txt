@@ -1,6 +1,9 @@
 //Used to install module require to run project in web
 npm install react-dom@19.0.0 react-native-web@0.20.0 @expo/metro-runtime@~5.0.4 --legacy-peer-deps
 
+//to make android preview build
+eas build -p android --profile preview
+
 
 /uploads/products/files-1751657415720-8736668.jpeg
 
