@@ -40,6 +40,7 @@ import { ActivityIndicator, View } from 'react-native';
 import axios from 'axios';
 import CategoryProducts from './screens/CategoryProducts';
 import ManageUsers from './screens/Admin/ManageUsers';
+import { NotificationService } from './services/NotificationService';
 
 //routes
 const Stack = createNativeStackNavigator();
@@ -97,6 +98,22 @@ export default function Main() {
   const [forceAuthStack, setForceAuthStack] = useState(false);
   const dispatch = useDispatch();
   const { isAuth } = useSelector(state => state.user);
+
+  // Initialize notifications
+  useEffect(() => {
+    const initializeNotifications = async () => {
+      console.log('🔔 Initializing notifications...');
+      try {
+        const notificationService = new NotificationService();
+        await notificationService.initialize();
+        console.log('✅ NotificationService initialized successfully');
+      } catch (error) {
+        console.log('❌ NotificationService initialization failed:', error);
+      }
+    };
+    
+    initializeNotifications();
+  }, []);
 
   // Check authentication status and set up Bearer token on app load
   useEffect(() => {

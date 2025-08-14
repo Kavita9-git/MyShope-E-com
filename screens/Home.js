@@ -29,25 +29,28 @@ const Home = () => {
   // Search state (just for navigation)
   const [searchText, setSearchText] = useState('');
 
+  // Load all data when the screen opens/mounts
   useEffect(() => {
-    dispatch(getUserData());
-    dispatch(getAllOrders());
-    dispatch(getAllProducts());
-    dispatch(getCart());
-    dispatch(getAllCategories());
-  }, []);
+    const loadInitialData = () => {
+      dispatch(getUserData());
+      dispatch(getAllOrders());
+      dispatch(getAllProducts());
+      dispatch(getCart());
+      dispatch(getAllCategories());
+    };
 
-  useEffect(() => {
-    dispatch(getUserData());
-    dispatch(getAllOrders());
-    dispatch(getAllProducts());
-    dispatch(getCart());
-    dispatch(getAllCategories());
-  }, [dispatch, Products]);
+    // Load data immediately when component mounts
+    loadInitialData();
 
-  // useEffect(() => {
-  //   dispatch(getAllProducts());
-  // });
+    // Optional: Set up focus listener to refresh data when screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Refresh products when screen comes back into focus
+      dispatch(getAllProducts());
+    });
+
+    // Cleanup listener on unmount
+    return unsubscribe;
+  }, [dispatch, navigation]);
 
   // Handle search navigation
   const handleSearch = () => {

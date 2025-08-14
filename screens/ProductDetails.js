@@ -31,6 +31,7 @@ import DisplayMessage from '../components/Message/DisplayMessage';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAllProducts } from '../redux/features/auth/productActions';
+import { getCart } from '../redux/features/auth/cartActions';
 import Toast from '../components/Message/Toast';
 import useToast from '../hooks/useToast';
 
@@ -102,6 +103,25 @@ const ProductDetails = ({ route, navigation }) => {
 
   const singleProductData = products;
 
+  console.log(
+    'get Console data',
+    currentImages?.map((img, index) => {
+      // Handle different image structures (hybrid objects vs URL strings)
+      const imageUrl = img?.cloudinaryUrl || img?.url || img;
+      const fullImageUrl =
+        typeof imageUrl === 'string' && imageUrl.startsWith('http')
+          ? imageUrl
+          : `https://nodejsapp-hfpl.onrender.com${imageUrl || img}`;
+
+      return (
+        <>
+          {/* <Image key={index} source={{ uri: fullImageUrl }} style={styles.imageCarousel} /> */}
+          {console.log('fullImageUrl', fullImageUrl)}
+        </>
+      );
+    })
+  );
+
   //Get Products Details from Route Params id
   useEffect(() => {
     console.log('handleincqty :', handleincqty);
@@ -118,24 +138,37 @@ const ProductDetails = ({ route, navigation }) => {
 
     // Check if product is clothing category
     const isClothing = getProduct?.category?.category?.toLowerCase() === 'clothes';
-    
+
     // If product has colors, set the first color as selected
     if (getProduct?.colors && getProduct.colors.length > 0) {
       setSelectedColor(getProduct.colors[0]);
-      
+
       // Handle color images based on category type
-      if (isClothing && getProduct.colors[0].images?.length > 0) {
-        // For clothing: color images are URL strings, need server prefix
-        setCurrentImages(
-          getProduct.colors[0].images.map(img => ({
-            url: img.startsWith('http') ? img : `https://nodejsapp-hfpl.onrender.com${img}`,
-          }))
-        );
+      if (isClothing) {
+        // For clothing: use hybridImages first, fallback to images
+        if (getProduct.colors[0].hybridImages?.length > 0) {
+          setCurrentImages(getProduct.colors[0].hybridImages);
+        } else if (getProduct.colors[0].images?.length > 0) {
+          // Fallback to URL strings with server prefix
+          setCurrentImages(
+            getProduct.colors[0].images.map(img => ({
+              url: img.startsWith('http') ? img : `https://nodejsapp-hfpl.onrender.com${img}`,
+            }))
+          );
+        } else {
+          // Final fallback to general images
+          const imagesToUse =
+            getProduct.multipleImages?.length > 0
+              ? getProduct.multipleImages
+              : getProduct.images || [];
+          setCurrentImages(imagesToUse);
+        }
       } else {
         // For non-clothing: fallback to general images or multiple images
-        const imagesToUse = getProduct.multipleImages?.length > 0 
-          ? getProduct.multipleImages 
-          : (getProduct.images || []);
+        const imagesToUse =
+          getProduct.multipleImages?.length > 0
+            ? getProduct.multipleImages
+            : getProduct.images || [];
         setCurrentImages(imagesToUse);
       }
 
@@ -146,9 +179,10 @@ const ProductDetails = ({ route, navigation }) => {
       }
     } else {
       // If no colors, use multiple images first, then fallback to general images
-      const imagesToUse = getProduct?.multipleImages?.length > 0 
-        ? getProduct.multipleImages 
-        : (getProduct?.images || []);
+      const imagesToUse =
+        getProduct?.multipleImages?.length > 0
+          ? getProduct.multipleImages
+          : getProduct?.images || [];
       setCurrentImages(imagesToUse);
     }
 
@@ -180,18 +214,27 @@ const ProductDetails = ({ route, navigation }) => {
     const isClothing = pDetails?.category?.category?.toLowerCase() === 'clothes';
 
     // Update images based on the selected color and category type
-    if (isClothing && color.images && color.images.length > 0) {
-      // For clothing: color images are URL strings, need server prefix
-      setCurrentImages(
-        color.images.map(img => ({
-          url: img.startsWith('http') ? img : `https://nodejsapp-hfpl.onrender.com${img}`,
-        }))
-      );
+    if (isClothing) {
+      // For clothing: use hybridImages first, fallback to images
+      if (color.hybridImages?.length > 0) {
+        setCurrentImages(color.hybridImages);
+      } else if (color.images?.length > 0) {
+        // Fallback to URL strings with server prefix
+        setCurrentImages(
+          color.images.map(img => ({
+            url: img.startsWith('http') ? img : `https://nodejsapp-hfpl.onrender.com${img}`,
+          }))
+        );
+      } else {
+        // Final fallback to general images
+        const imagesToUse =
+          pDetails?.multipleImages?.length > 0 ? pDetails.multipleImages : pDetails?.images || [];
+        setCurrentImages(imagesToUse);
+      }
     } else {
       // For non-clothing: fallback to multiple images or general images
-      const imagesToUse = pDetails?.multipleImages?.length > 0 
-        ? pDetails.multipleImages 
-        : (pDetails?.images || []);
+      const imagesToUse =
+        pDetails?.multipleImages?.length > 0 ? pDetails.multipleImages : pDetails?.images || [];
       setCurrentImages(imagesToUse);
     }
 
@@ -275,6 +318,9 @@ const ProductDetails = ({ route, navigation }) => {
 
     setSuccessMessage('');
     setHandleincQty(!handleincqty);
+    
+    // Reload products data to sync with server
+    dispatch(getAllProducts());
   };
 
   const handleRemoveQty = () => {
@@ -315,6 +361,9 @@ const ProductDetails = ({ route, navigation }) => {
 
     setSuccessMessage('');
     setHandledecQty(!handledecqty);
+    
+    // Reload products data to sync with server
+    dispatch(getAllProducts());
   };
 
   const handleScroll = event => {
@@ -383,8 +432,10 @@ const ProductDetails = ({ route, navigation }) => {
         addToCart({
           productId: p._id,
           name: p.name,
-          price: selectedSize?.price || p.price,
-          image: currentImages[0]?.url || p.images?.[0]?.url,
+          price: selectedSize?.discountprice || selectedSize?.price || p.price,
+          originalPrice: selectedSize?.price || p.price,
+          discountPercentage: selectedSize?.discountper || 0,
+          image: currentImages[0]?.cloudinaryUrl || currentImages[0]?.url || p.images?.[0]?.url,
           quantity: qty,
           size: selectedSize?.size,
           color: selectedColor?.colorName,
@@ -428,9 +479,13 @@ const ProductDetails = ({ route, navigation }) => {
         setQty(1);
         // setSuccessMessage('Product added to cart');
         showSuccess('Product added to cart');
-
-        // Refresh products to get updated stock from server
+        
+        // Immediately refresh both cart and products data from server
+        dispatch(getCart());
         dispatch(getAllProducts());
+        
+        // Trigger a re-render to update with fresh server data
+        setHandleaddToCart(!handleaddtocart);
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -438,7 +493,7 @@ const ProductDetails = ({ route, navigation }) => {
       showError('Failed to add product to cart. Please try again.');
     }
 
-    setHandleaddToCart(!handleaddtocart);
+    // Moved to inside the success block to trigger re-render with fresh data
   };
 
   // Star rating component
@@ -636,18 +691,18 @@ const ProductDetails = ({ route, navigation }) => {
             onScroll={handleScroll}
             scrollEventThrottle={16}
           >
-            {currentImages?.map((img, index) => (
-              <Image
-                key={index}
-                // source={{ uri: img.url  }}
-                source={{
-                  uri: img?.url.startsWith('http')
-                    ? img?.url
-                    : `https://nodejsapp-hfpl.onrender.com${img?.url}`,
-                }}
-                style={styles.imageCarousel}
-              />
-            ))}
+            {currentImages?.map((img, index) => {
+              // Handle different image structures (hybrid objects vs URL strings)
+              const imageUrl = img?.cloudinaryUrl || img?.url || img;
+              const fullImageUrl =
+                typeof imageUrl === 'string' && imageUrl.startsWith('http')
+                  ? imageUrl
+                  : `https://nodejsapp-hfpl.onrender.com${imageUrl || img}`;
+
+              return (
+                <Image key={index} source={{ uri: fullImageUrl }} style={styles.imageCarousel} />
+              );
+            })}
           </ScrollView>
 
           {/* Dots Indicator */}
@@ -693,8 +748,29 @@ const ProductDetails = ({ route, navigation }) => {
               <Feather name="tag" size={24} color="#3182ce" />
             </View>
             <View style={styles.statInfo}>
-              <Text style={styles.statValue}>${selectedSize?.price || pDetails?.price}</Text>
-              <Text style={styles.statLabel}>Price</Text>
+              {selectedSize?.discountprice && selectedSize.discountprice > 0 ? (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text
+                      style={[
+                        styles.statValue,
+                        { textDecorationLine: 'line-through', color: '#999', fontSize: 14 },
+                      ]}
+                    >
+                      ${selectedSize.price}
+                    </Text>
+                    <Text style={styles.statValue}> ${selectedSize.discountprice}</Text>
+                  </View>
+                  <Text style={[styles.statLabel, { color: '#e53e3e' }]}>
+                    {selectedSize.discountper} OFF
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.statValue}>${selectedSize?.price || pDetails?.price}</Text>
+                  <Text style={styles.statLabel}>Price</Text>
+                </>
+              )}
             </View>
           </View>
 
@@ -737,8 +813,8 @@ const ProductDetails = ({ route, navigation }) => {
                 title: 'Return Policy',
                 body: (
                   <Text>
-                    'This item is eligible for return within {pDetails?.returnPolicy} of delivery.
-                    Please refer to our full return policy for more details.'
+                    This item is eligible for return within {pDetails?.returnPolicy} of delivery.
+                    Please refer to our full return policy for more details.
                   </Text>
                 ),
                 icon: <Icon name="package-variant-closed" size={20} color="#333" />,
@@ -803,13 +879,15 @@ const ProductDetails = ({ route, navigation }) => {
         {/* Size Selection - Only show for Clothes category and if sizes are available */}
         {isClothingProduct && availableSizes.length > 0 && (
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>
-              <Icon name="ruler" size={18} color="#333" /> Select Size
-            </Text>
+            <View style={styles.sectionHeaderWithIcon}>
+              <Icon name="ruler" size={20} color="#2d3748" />
+              <Text style={styles.sectionTitle}>Select Size</Text>
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.sizeContainer}
+              contentContainerStyle={{ paddingRight: 15 }}
             >
               {availableSizes.map((sizeObj, index) => (
                 <TouchableOpacity
@@ -822,37 +900,102 @@ const ProductDetails = ({ route, navigation }) => {
                   onPress={() => handleSizeSelect(sizeObj)}
                   disabled={sizeObj.stock <= 0}
                 >
-                  <Text
-                    style={[
-                      styles.sizeText,
-                      selectedSize?.size === sizeObj.size && styles.selectedSizeText,
-                      sizeObj.stock <= 0 && styles.outOfStockSizeText,
-                    ]}
-                  >
-                    {sizeObj.size}
-                  </Text>
-                  {sizeObj.price && sizeObj.price !== 0 && (
+                  <View style={styles.sizeButtonContent}>
                     <Text
                       style={[
-                        styles.sizePriceText,
-                        selectedSize?.size === sizeObj.size && styles.selectedSizePriceText,
+                        styles.sizeText,
+                        selectedSize?.size === sizeObj.size && styles.selectedSizeText,
                         sizeObj.stock <= 0 && styles.outOfStockSizeText,
                       ]}
                     >
-                      ${sizeObj.price}
+                      {sizeObj.size}
                     </Text>
-                  )}
+                    {sizeObj.stock <= 0 && <Text style={styles.outOfStockLabel}>Out</Text>}
+                    {sizeObj.price && sizeObj.price !== 0 && sizeObj.stock > 0 && (
+                      <View style={styles.sizePriceContainer}>
+                        {sizeObj.discountprice && sizeObj.discountprice > 0 ? (
+                          <>
+                            <Text
+                              style={[
+                                styles.sizePriceText,
+                                styles.originalPrice,
+                                selectedSize?.size === sizeObj.size && styles.selectedOriginalPrice,
+                              ]}
+                            >
+                              ${sizeObj.price}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.sizePriceText,
+                                styles.discountedPrice,
+                                selectedSize?.size === sizeObj.size && styles.selectedSizePriceText,
+                              ]}
+                            >
+                              ${sizeObj.discountprice}
+                            </Text>
+                            {sizeObj.discountper && (
+                              <Text
+                                style={[
+                                  styles.discountBadge,
+                                  selectedSize?.size === sizeObj.size &&
+                                    styles.selectedDiscountBadge,
+                                ]}
+                              >
+                                {sizeObj.discountper} OFF
+                              </Text>
+                            )}
+                          </>
+                        ) : (
+                          <Text
+                            style={[
+                              styles.sizePriceText,
+                              selectedSize?.size === sizeObj.size && styles.selectedSizePriceText,
+                            ]}
+                          >
+                            ${sizeObj.price}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                    {selectedSize?.size === sizeObj.size && sizeObj.stock > 0 && (
+                      <View style={styles.selectedIndicator}>
+                        <Icon name="check-circle" size={16} color="#1e3c72" />
+                      </View>
+                    )}
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
             {selectedSize && (
               <View style={styles.selectedItemBadge}>
-                <Text style={styles.selectedItemText}>
-                  Selected: {selectedSize.size}
+                <Icon name="check-decagram" size={16} color="#2C5282" style={{ marginRight: 6 }} />
+                <View style={styles.selectedItemContent}>
+                  <Text style={styles.selectedItemText}>Size {selectedSize.size} Selected</Text>
                   {selectedSize.price && selectedSize.price > 0 && (
-                    <Text style={styles.sizePriceHighlight}> - ${selectedSize.price}</Text>
+                    <View style={styles.selectedPriceInfo}>
+                      {selectedSize.discountprice && selectedSize.discountprice > 0 ? (
+                        <>
+                          <Text style={[styles.selectedPriceText, styles.strikethrough]}>
+                            ${selectedSize.price}
+                          </Text>
+                          <Text style={styles.selectedPriceText}>
+                            ${selectedSize.discountprice}
+                          </Text>
+                          <View style={styles.discountTag}>
+                            <Text style={styles.discountTagText}>
+                              {selectedSize.discountper} OFF
+                            </Text>
+                          </View>
+                        </>
+                      ) : (
+                        <Text style={styles.selectedPriceText}>${selectedSize.price}</Text>
+                      )}
+                      {selectedSize.stock && (
+                        <Text style={styles.stockInfo}>• {selectedSize.stock} in stock</Text>
+                      )}
+                    </View>
                   )}
-                </Text>
+                </View>
               </View>
             )}
           </View>
@@ -1186,10 +1329,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 15,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginLeft: 8,
+    letterSpacing: 0.3,
   },
   colorContainer: {
     flexDirection: 'row',
@@ -1216,66 +1360,180 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.0 }],
   },
   selectedItemBadge: {
-    backgroundColor: '#EBF4FF',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
+    backgroundColor: '#f0f7ff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginTop: 15,
+    borderWidth: 1,
+    borderColor: '#d6e7ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectedItemContent: {
+    flex: 1,
   },
   selectedItemText: {
     color: '#2C5282',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  selectedPriceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  selectedPriceText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#1e3c72',
+    marginRight: 8,
+  },
+  strikethrough: {
+    textDecorationLine: 'line-through',
+    color: '#9ca3af',
+    fontWeight: '500',
+  },
+  discountTag: {
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  discountTagText: {
+    color: '#dc2626',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  stockInfo: {
+    color: '#059669',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  sectionHeaderWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sizeButtonContent: {
+    alignItems: 'center',
+    position: 'relative',
+  },
+  sizePriceContainer: {
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  originalPrice: {
+    textDecorationLine: 'line-through',
+    fontSize: 11,
+    color: '#9ca3af',
+    marginBottom: 2,
+  },
+  selectedOriginalPrice: {
+    color: '#94a3b8',
+  },
+  discountedPrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#059669',
+    marginBottom: 2,
+  },
+  discountBadge: {
+    fontSize: 10,
+    color: '#dc2626',
+    fontWeight: '700',
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 2,
+  },
+  selectedDiscountBadge: {
+    backgroundColor: '#fef2f2',
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+  },
+  outOfStockLabel: {
+    fontSize: 10,
+    color: '#ef4444',
+    fontWeight: '700',
+    marginTop: 2,
   },
   sizeContainer: {
     flexDirection: 'row',
-    marginBottom: 15,
+    marginBottom: 20,
+    paddingTop: 5,
   },
   sizeButton: {
-    minWidth: 50,
-    height: 50,
-    borderRadius: 10,
-    marginRight: 10,
+    minWidth: 70,
+    minHeight: 80,
+    borderRadius: 12,
+    marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f7fa',
-    borderWidth: 1,
-    borderColor: '#e0e5eb',
-    paddingHorizontal: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#e8ecf1',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 2,
   },
   selectedSizeButton: {
     borderColor: '#1e3c72',
-    borderWidth: 2,
-    backgroundColor: '#EBF4FF',
+    borderWidth: 2.5,
+    backgroundColor: '#f0f7ff',
+    transform: [{ scale: 1.02 }],
+    shadowColor: '#1e3c72',
+    shadowOpacity: 0.15,
+    elevation: 4,
   },
   outOfStockSize: {
-    backgroundColor: '#f0f0f0',
-    borderColor: '#ddd',
-    opacity: 0.7,
+    backgroundColor: '#fafafa',
+    borderColor: '#e0e0e0',
+    opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   sizeText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#444',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
   selectedSizeText: {
     color: '#1e3c72',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   outOfStockSizeText: {
-    color: '#aaa',
+    color: '#b0b0b0',
+    textDecorationLine: 'line-through',
   },
   sizePriceText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 13,
+    color: '#718096',
+    marginTop: 3,
+    fontWeight: '500',
   },
   selectedSizePriceText: {
     color: '#1e3c72',
+    fontWeight: '600',
   },
   sizePriceHighlight: {
     fontWeight: '700',
     color: '#1e3c72',
+    fontSize: 14,
   },
   actionCard: {
     backgroundColor: '#ffffff',

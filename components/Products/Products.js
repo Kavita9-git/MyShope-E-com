@@ -20,13 +20,9 @@ const Products = ({ searchText = "", filterOptions = null }) => {
   const [fallbackMode, setFallbackMode] = useState(false);
 
   useEffect(() => {
-    dispatch(getAllProducts());
-  }, []);
-
-  useEffect(() => {
     // Fetch products when component mounts
     dispatch(getAllProducts());
-  }, [dispatch, filteredProducts]);
+  }, [dispatch]);
 
   // Use fallback data if products still not available after 5 seconds
   useEffect(() => {

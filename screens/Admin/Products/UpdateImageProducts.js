@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Button,
   Animated,
+  Alert,
 } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../../../components/Layout/Layout';
@@ -111,6 +112,7 @@ const UpdateImageProducts = ({ navigation, route }) => {
       setChangedColorImages([]);
       setGeneralImage('');
       setColorImages([]);
+      setOriginalColorImages([]);
 
       // Show notification instead of alert
       setSuccessMessage(message);
@@ -150,7 +152,7 @@ const UpdateImageProducts = ({ navigation, route }) => {
   const [availableSubcategories, setAvailableSubcategories] = useState([]);
   const [subSubcategory, setSubSubcategory] = useState('');
   const [availableSubSubcategories, setAvailableSubSubcategories] = useState([]);
-  
+
   const [productId, setProductId] = useState('');
   const [generalImage, setGeneralImage] = useState('');
   const [colorImages, setColorImages] = useState([]); // Holds colors with images & sizes
@@ -165,18 +167,23 @@ const UpdateImageProducts = ({ navigation, route }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [getAllProductsData, setGetAllProductsData] = useState([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  
+
   // New state for multiple images (non-clothing categories)
   const [multipleImages, setMultipleImages] = useState([]);
   const [changedMultipleImages, setChangedMultipleImages] = useState([]);
+
+  // Store original product data for comparison
+  const [originalColorImages, setOriginalColorImages] = useState([]);
   
+  // States for submit button loading and success indication
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
   // Helper function to check if category is clothing
-  const isClothingCategory = (categoryName) => {
+  const isClothingCategory = categoryName => {
     if (!categoryName) return false;
     const clothingCategories = ['clothing', 'clothes', 'apparel', 'fashion', 'garments'];
-    return clothingCategories.some(cat => 
-      categoryName.toLowerCase().includes(cat.toLowerCase())
-    );
+    return clothingCategories.some(cat => categoryName.toLowerCase().includes(cat.toLowerCase()));
   };
 
   // Update subcategories when category changes
@@ -193,7 +200,9 @@ const UpdateImageProducts = ({ navigation, route }) => {
             return subcat.name;
           } else if (typeof subcat === 'object' && subcat !== null) {
             // Handle the corrupted format where strings are stored as objects with numeric keys
-            const keys = Object.keys(subcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+            const keys = Object.keys(subcat)
+              .filter(key => !isNaN(key))
+              .sort((a, b) => Number(a) - Number(b));
             if (keys.length > 0) {
               return keys.map(key => subcat[key]).join('');
             }
@@ -222,15 +231,21 @@ const UpdateImageProducts = ({ navigation, route }) => {
   useEffect(() => {
     // Skip if we don't have the necessary data
     if (!categoryId || !categories.length) return;
-    
-    console.log('Subcategory effect triggered with:', subcategory, categoryId, 'productId:', productId);
-    
+
+    console.log(
+      'Subcategory effect triggered with:',
+      subcategory,
+      categoryId,
+      'productId:',
+      productId
+    );
+
     if (subcategory && categoryId) {
       const selectedCategory = categories.find(cat => cat._id === categoryId);
       if (selectedCategory && selectedCategory.subcategories) {
         // Find the selected subcategory object
         let selectedSubcategory = null;
-        
+
         for (const subcat of selectedCategory.subcategories) {
           let subcatName = '';
           if (typeof subcat === 'string') {
@@ -238,19 +253,25 @@ const UpdateImageProducts = ({ navigation, route }) => {
           } else if (subcat && subcat.name) {
             subcatName = subcat.name;
           } else if (typeof subcat === 'object' && subcat !== null) {
-            const keys = Object.keys(subcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+            const keys = Object.keys(subcat)
+              .filter(key => !isNaN(key))
+              .sort((a, b) => Number(a) - Number(b));
             if (keys.length > 0) {
               subcatName = keys.map(key => subcat[key]).join('');
             }
           }
-          
+
           if (subcatName === subcategory) {
             selectedSubcategory = subcat;
             break;
           }
         }
 
-        if (selectedSubcategory && selectedSubcategory.subSubCategories && selectedSubcategory.subSubCategories.length > 0) {
+        if (
+          selectedSubcategory &&
+          selectedSubcategory.subSubCategories &&
+          selectedSubcategory.subSubCategories.length > 0
+        ) {
           // Extract sub-subcategory names
           const subSubcategoryNames = selectedSubcategory.subSubCategories.map(subSubcat => {
             if (typeof subSubcat === 'string') {
@@ -258,7 +279,9 @@ const UpdateImageProducts = ({ navigation, route }) => {
             } else if (subSubcat && subSubcat.name) {
               return subSubcat.name;
             } else if (typeof subSubcat === 'object' && subSubcat !== null) {
-              const keys = Object.keys(subSubcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+              const keys = Object.keys(subSubcat)
+                .filter(key => !isNaN(key))
+                .sort((a, b) => Number(a) - Number(b));
               if (keys.length > 0) {
                 return keys.map(key => subSubcat[key]).join('');
               }
@@ -288,8 +311,12 @@ const UpdateImageProducts = ({ navigation, route }) => {
   }, [subcategory, categoryId, categories, productId]);
 
   //Product Create
-  const handleUploadChanges = () => {
+  const handleUploadChanges = async () => {
     if (!productId) return alert('Please select a product');
+    
+    // Start loading animation
+    setIsSubmitting(true);
+    setShowSuccess(false);
 
     const formData = new FormData();
 
@@ -319,30 +346,37 @@ const UpdateImageProducts = ({ navigation, route }) => {
       });
     }
 
-    colorImages.forEach(color => {
-      color.images.forEach((imgUri, i) => {
-        if (imgUri.startsWith('file')) {
-          const ext = imgUri.split('.').pop();
-          formData.append(color.colorId, {
-            uri: imgUri,
-            name: `${color.colorId}_${i}.${ext}`,
-            type: `image/${ext}`,
-          });
-        }
-      });
-    });
+    // Filter colors that have new images (file:// URIs) and prepare them for upload
+    const colorsWithNewImages = [];
+    const colorsNeedingUpdate = [];
 
     changedColorImages.forEach(color => {
-      color.images.forEach((imgUri, i) => {
-        if (imgUri.startsWith('file')) {
-          const ext = imgUri.split('.').pop();
-          formData.append(color.colorId, {
-            uri: imgUri,
-            name: `${color.colorId}_${i}.${ext}`,
-            type: `image/${ext}`,
-          });
-        }
-      });
+      const hasNewImages = color.images.some(imgUri => imgUri.startsWith('file'));
+      const originalColor = originalColorImages.find(c => c.colorId === color.colorId);
+      
+      // Check if images have been changed (different count or content)
+      const imagesChanged = JSON.stringify(color.images) !== JSON.stringify(originalColor?.images);
+      const sizesChanged = JSON.stringify(color.sizes) !== JSON.stringify(originalColor?.sizes);
+
+      if (hasNewImages) {
+        // Add ONLY new images to FormData (file:// URIs)
+        color.images.forEach((imgUri, i) => {
+          if (imgUri.startsWith('file')) {
+            const ext = imgUri.split('.').pop();
+            formData.append(color.colorId, {
+              uri: imgUri,
+              name: `${color.colorId}_${i}.${ext}`,
+              type: `image/${ext}`,
+            });
+          }
+        });
+
+        colorsWithNewImages.push(color.colorId);
+        colorsNeedingUpdate.push(color);
+      } else if (imagesChanged || sizesChanged) {
+        // Images were removed/changed or sizes changed
+        colorsNeedingUpdate.push(color);
+      }
     });
 
     // Add multiple images for non-clothing categories
@@ -357,7 +391,7 @@ const UpdateImageProducts = ({ navigation, route }) => {
           });
         }
       });
-      
+
       // Prepare multipleImages JSON metadata
       const multipleImagesMetadata = changedMultipleImages.map(img => ({
         fileName: img.fileName || 'image',
@@ -366,7 +400,7 @@ const UpdateImageProducts = ({ navigation, route }) => {
         height: img.height,
         localPath: img.localPath || img.uri,
       }));
-      
+
       formData.append('multipleImagesMetadata', JSON.stringify(multipleImagesMetadata));
     }
 
@@ -396,6 +430,8 @@ const UpdateImageProducts = ({ navigation, route }) => {
       JSON.stringify(
         changedColorImages.map(c => ({
           colorId: c.colorId,
+          imagesCount: c.images ? c.images.length : 0,
+          newImagesCount: c.images ? c.images.filter(img => img.startsWith('file')).length : 0,
           sizes: c.sizes
             ? c.sizes.map(s => ({
                 size: s.size,
@@ -411,12 +447,14 @@ const UpdateImageProducts = ({ navigation, route }) => {
       )
     );
 
-    // Prepare colors JSON and attach images
-    const safeColors = changedColorImages.map(c => ({
+    // Only send colors that actually need updating (have new images or changed properties)
+    const safeColors = colorsNeedingUpdate.map(c => ({
       colorId: c.colorId,
       colorName: c.colorName,
       colorCode:
         c.colorCode || availableColors.find(a => a.colorId === c.colorId)?.colorCode || '#000000', // fallback
+      // Include ALL images for the color (both existing URLs and new file:// URIs will be handled by backend)
+      images: c.images || [],
       sizes: (c.sizes || []).map(s => ({
         size: s.size,
         price: Number(s.price),
@@ -426,28 +464,45 @@ const UpdateImageProducts = ({ navigation, route }) => {
       })),
     }));
 
-    formData.append('colors', JSON.stringify(safeColors));
+    // Only append colors to FormData if there are actually colors to update
+    if (safeColors.length > 0) {
+      formData.append('colors', JSON.stringify(safeColors));
+      console.log('Colors with updates:', JSON.stringify(safeColors, null, 2));
+    } else {
+      console.log('No colors need updating');
+    }
 
-    console.log('FormData Colors:', JSON.stringify(safeColors, null, 2));
-    console.log(
-      'Original Color Images with discount values:',
-      JSON.stringify(
-        changedColorImages.map(c => ({
-          colorId: c.colorId,
-          sizes: c.sizes.map(s => ({
-            size: s.size,
-            discountper: s.discountper,
-            discountprice: s.discountprice,
-          })),
-        })),
-        null,
-        2
-      )
-    );
+    console.log('Colors with new images:', colorsWithNewImages);
+    console.log('Total colors needing update:', colorsNeedingUpdate.length);
     console.log('Changed General Image:', changedGeneralImage);
-    console.log('Changed Color Images:', changedColorImages);
 
-    dispatch(updateProductImage(productId, formData));
+    // Validate before sending
+    if (
+      !changedGeneralImage &&
+      safeColors.length === 0 &&
+      changedMultipleImages.length === 0 &&
+      Object.keys(changedFields).length === 0
+    ) {
+      setIsSubmitting(false);
+      return alert('No changes detected. Please make changes before updating.');
+    }
+
+    try {
+      await dispatch(updateProductImage(productId, formData));
+      
+      // Show success animation on button
+      setIsSubmitting(false);
+      setShowSuccess(true);
+      
+      // Reset success state after 2 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error updating product:', error);
+      setIsSubmitting(false);
+      setShowSuccess(false);
+    }
   };
 
   const fetchProducts = async itemValue => {
@@ -465,18 +520,8 @@ const UpdateImageProducts = ({ navigation, route }) => {
     console.log('Product subSubcategory:', getProduct?.subSubcategory);
     console.log('Product category:', getProduct?.category);
     console.log('Available categories:', categories.length);
-
-    const enrichedColors = (getProduct?.colors || []).map(c => ({
-      ...c,
-      colorCode:
-        c.colorCode || availableColors.find(a => a.colorId === c.colorId)?.colorCode || '#000000', // fallback if missing
-      // Ensure sizes have all required properties
-      sizes: (c.sizes || []).map(s => ({
-        ...s,
-        discountper: s.discountper || '0',
-        discountprice: s.discountprice || 0,
-      })),
-    }));
+    console.log('Product hybridImages:', getProduct?.hybridImages);
+    console.log('Product multipleImages:', getProduct?.multipleImages);
 
     setName(getProduct?.name);
     setDescription(getProduct?.description);
@@ -487,39 +532,179 @@ const UpdateImageProducts = ({ navigation, route }) => {
     setSubcategory(getProduct?.subcategory || '');
     setSubSubcategory(getProduct?.subSubcategory || ''); // Set sub-subcategory from product data
     setGeneralImage(getProduct?.images[0]?.url || getProduct?.images[0] || '');
-    setColorImages(enrichedColors);
-    setChangedColorImages(enrichedColors);
-    
-    // Handle multiple images for non-clothing categories
-    if (getProduct?.multipleImages && Array.isArray(getProduct.multipleImages)) {
-      const loadedMultipleImages = getProduct.multipleImages.map(img => ({
-        uri: img.cloudinaryUrl || img.localPath || img.url,
-        fileName: img.fileName || 'image',
-        fileSize: img.fileSize,
-        width: img.width,
-        height: img.height,
-        localPath: img.localPath,
-        cloudinaryUrl: img.cloudinaryUrl,
-        ...img
-      }));
-      setMultipleImages(loadedMultipleImages);
-      setChangedMultipleImages(loadedMultipleImages);
-    } else {
-      // Clear multiple images if none exist
+
+    // Determine if this is a clothing category
+    const isClothing = isClothingCategory(getProduct?.category?.category);
+    console.log('Is clothing category:', isClothing);
+
+    if (isClothing) {
+      // For clothing categories, load from hybridImages
+      let enrichedColors = [];
+      
+      if (getProduct?.hybridImages && Array.isArray(getProduct.hybridImages) && getProduct.hybridImages.length > 0) {
+        console.log('Loading color images from hybridImages:', getProduct.hybridImages);
+        
+        // Group hybridImages by colorId to reconstruct color structure
+        const colorMap = {};
+        
+        getProduct.hybridImages.forEach(hybridImg => {
+          // Extract colorId from the hybrid image
+          const colorId = hybridImg.colorId || hybridImg.colorVariant?.colorId || 'default';
+          const colorName = hybridImg.colorName || hybridImg.colorVariant?.colorName || 
+                           availableColors.find(c => c.colorId === colorId)?.colorName || colorId;
+          const colorCode = hybridImg.colorCode || hybridImg.colorVariant?.colorCode || 
+                           availableColors.find(c => c.colorId === colorId)?.colorCode || '#000000';
+          
+          if (!colorMap[colorId]) {
+            colorMap[colorId] = {
+              colorId: colorId,
+              colorName: colorName,
+              colorCode: colorCode,
+              images: [],
+              sizes: [],
+              _id: hybridImg._id || hybridImg.colorVariant?._id
+            };
+          }
+          
+          // Extract image URL from various possible formats
+          let imageUrl = null;
+          if (typeof hybridImg === 'string') {
+            imageUrl = hybridImg;
+          } else if (hybridImg.cloudinaryUrl) {
+            imageUrl = hybridImg.cloudinaryUrl;
+          } else if (hybridImg.url) {
+            imageUrl = hybridImg.url;
+          } else if (hybridImg.localPath) {
+            imageUrl = hybridImg.localPath;
+          } else if (hybridImg.image) {
+            imageUrl = hybridImg.image;
+          }
+          
+          // Add unique image URLs to the color's images array
+          if (imageUrl && !colorMap[colorId].images.includes(imageUrl)) {
+            colorMap[colorId].images.push(imageUrl);
+          }
+          
+          // Handle sizes - merge or update if they exist
+          if (hybridImg.sizes && Array.isArray(hybridImg.sizes) && hybridImg.sizes.length > 0) {
+            // Use the most complete sizes data
+            if (colorMap[colorId].sizes.length === 0 || hybridImg.sizes.length > colorMap[colorId].sizes.length) {
+              colorMap[colorId].sizes = hybridImg.sizes.map(s => ({
+                size: s.size,
+                price: s.price || 0,
+                stock: s.stock || 0,
+                discountper: s.discountper || '0',
+                discountprice: s.discountprice || 0,
+              }));
+            }
+          } else if (hybridImg.colorVariant?.sizes && Array.isArray(hybridImg.colorVariant.sizes)) {
+            // Check if sizes are stored in colorVariant
+            if (colorMap[colorId].sizes.length === 0) {
+              colorMap[colorId].sizes = hybridImg.colorVariant.sizes.map(s => ({
+                size: s.size,
+                price: s.price || 0,
+                stock: s.stock || 0,
+                discountper: s.discountper || '0',
+                discountprice: s.discountprice || 0,
+              }));
+            }
+          }
+        });
+        
+        enrichedColors = Object.values(colorMap);
+        console.log('Processed enrichedColors from hybridImages:', enrichedColors);
+      } else if (getProduct?.colors && Array.isArray(getProduct.colors)) {
+        // Fallback to colors array if hybridImages doesn't exist
+        console.log('Fallback: Loading from colors array');
+        enrichedColors = getProduct.colors.map(c => ({
+          ...c,
+          colorCode: c.colorCode || availableColors.find(a => a.colorId === c.colorId)?.colorCode || '#000000',
+          sizes: (c.sizes || []).map(s => ({
+            ...s,
+            discountper: s.discountper || '0',
+            discountprice: s.discountprice || 0,
+          })),
+        }));
+      }
+      
+      console.log('Final enriched colors for clothing:', enrichedColors);
+      setColorImages(enrichedColors);
+      setChangedColorImages(enrichedColors);
+      setOriginalColorImages(JSON.parse(JSON.stringify(enrichedColors)));
+      
+      // Clear multiple images for clothing categories
       setMultipleImages([]);
       setChangedMultipleImages([]);
+    } else {
+      // For non-clothing categories, load from multipleImages
+      console.log('Loading images from multipleImages for non-clothing category');
+      
+      if (getProduct?.multipleImages && Array.isArray(getProduct.multipleImages) && getProduct.multipleImages.length > 0) {
+        console.log('MultipleImages data:', getProduct.multipleImages);
+        
+        const loadedMultipleImages = getProduct.multipleImages.map((img, index) => {
+          // Handle different formats of image data
+          if (typeof img === 'string') {
+            return {
+              uri: img,
+              fileName: `image_${index + 1}`,
+              localPath: img
+            };
+          } else if (img && typeof img === 'object') {
+            // Extract URL from various possible properties
+            let imageUri = img.cloudinaryUrl || img.url || img.uri || img.localPath || img.image;
+            
+            // If still no URI found, check if the object itself might be the URL
+            if (!imageUri && img.toString && img.toString() !== '[object Object]') {
+              imageUri = img.toString();
+            }
+            
+            return {
+              uri: imageUri || '',
+              fileName: img.fileName || img.name || `image_${index + 1}`,
+              fileSize: img.fileSize || img.size,
+              width: img.width,
+              height: img.height,
+              localPath: img.localPath,
+              cloudinaryUrl: img.cloudinaryUrl,
+              publicId: img.publicId,
+              ...img
+            };
+          }
+          return null;
+        }).filter(img => img && img.uri); // Filter out any null or invalid entries
+        
+        console.log('Processed multipleImages:', loadedMultipleImages);
+        setMultipleImages(loadedMultipleImages);
+        setChangedMultipleImages(loadedMultipleImages);
+      } else {
+        console.log('No multipleImages found for non-clothing product');
+        // Clear multiple images if none exist
+        setMultipleImages([]);
+        setChangedMultipleImages([]);
+      }
+      
+      // Clear color images for non-clothing categories
+      setColorImages([]);
+      setChangedColorImages([]);
+      setOriginalColorImages([]);
     }
-    
+
     setIsVisible(true);
 
-    console.log('Setting product states - subcategory:', getProduct?.subcategory, 'subSubcategory:', getProduct?.subSubcategory);
+    console.log(
+      'Setting product states - subcategory:',
+      getProduct?.subcategory,
+      'subSubcategory:',
+      getProduct?.subSubcategory
+    );
 
     // Update available subcategories based on selected category
     if (getProduct?.category?._id) {
       const selectedCategory = categories.find(cat => cat._id === getProduct.category._id);
       console.log('Selected category found:', selectedCategory);
       console.log('Selected category subcategories:', selectedCategory?.subcategories);
-      
+
       if (selectedCategory && selectedCategory.subcategories) {
         // Extract subcategory names properly
         const subcategoryNames = selectedCategory.subcategories.map(subcat => {
@@ -528,22 +713,24 @@ const UpdateImageProducts = ({ navigation, route }) => {
           } else if (subcat && subcat.name) {
             return subcat.name;
           } else if (typeof subcat === 'object' && subcat !== null) {
-            const keys = Object.keys(subcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+            const keys = Object.keys(subcat)
+              .filter(key => !isNaN(key))
+              .sort((a, b) => Number(a) - Number(b));
             if (keys.length > 0) {
               return keys.map(key => subcat[key]).join('');
             }
           }
           return String(subcat);
         });
-        
+
         console.log('Extracted subcategory names:', subcategoryNames);
         setAvailableSubcategories(subcategoryNames);
-        
+
         // If product has a subcategory, find and set available sub-subcategories
         if (getProduct?.subcategory) {
           console.log('Product has subcategory:', getProduct.subcategory);
           console.log('Looking for matching subcategory in:', selectedCategory.subcategories);
-          
+
           for (const subcat of selectedCategory.subcategories) {
             let subcatName = '';
             if (typeof subcat === 'string') {
@@ -551,18 +738,25 @@ const UpdateImageProducts = ({ navigation, route }) => {
             } else if (subcat && subcat.name) {
               subcatName = subcat.name;
             } else if (typeof subcat === 'object' && subcat !== null) {
-              const keys = Object.keys(subcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+              const keys = Object.keys(subcat)
+                .filter(key => !isNaN(key))
+                .sort((a, b) => Number(a) - Number(b));
               if (keys.length > 0) {
                 subcatName = keys.map(key => subcat[key]).join('');
               }
             }
-            
-            console.log('Comparing subcatName:', subcatName, 'with product subcategory:', getProduct.subcategory);
-            
+
+            console.log(
+              'Comparing subcatName:',
+              subcatName,
+              'with product subcategory:',
+              getProduct.subcategory
+            );
+
             if (subcatName === getProduct.subcategory) {
               console.log('Found matching subcategory:', subcat);
               console.log('SubSubCategories available:', subcat.subSubCategories);
-              
+
               if (subcat && subcat.subSubCategories && subcat.subSubCategories.length > 0) {
                 const subSubcategoryNames = subcat.subSubCategories.map(subSubcat => {
                   if (typeof subSubcat === 'string') {
@@ -570,14 +764,16 @@ const UpdateImageProducts = ({ navigation, route }) => {
                   } else if (subSubcat && subSubcat.name) {
                     return subSubcat.name;
                   } else if (typeof subSubcat === 'object' && subSubcat !== null) {
-                    const keys = Object.keys(subSubcat).filter(key => !isNaN(key)).sort((a, b) => Number(a) - Number(b));
+                    const keys = Object.keys(subSubcat)
+                      .filter(key => !isNaN(key))
+                      .sort((a, b) => Number(a) - Number(b));
                     if (keys.length > 0) {
                       return keys.map(key => subSubcat[key]).join('');
                     }
                   }
                   return String(subSubcat);
                 });
-                
+
                 console.log('Extracted sub-subcategory names:', subSubcategoryNames);
                 console.log('Setting availableSubSubcategories directly:', subSubcategoryNames);
                 setAvailableSubSubcategories(subSubcategoryNames);
@@ -643,6 +839,35 @@ const UpdateImageProducts = ({ navigation, route }) => {
         return updatedColors;
       });
     }
+  };
+
+  // Remove individual color image
+  const removeColorImage = (colorIndex, imageIndex) => {
+    setColorImages(prevColors => {
+      const updatedColors = prevColors.map((color, idx) => {
+        if (idx === colorIndex) {
+          const updatedImages = color.images.filter((_, i) => i !== imageIndex);
+          return { ...color, images: updatedImages };
+        }
+        return color;
+      });
+      setChangedColorImages(updatedColors); // Track changed colors
+      return updatedColors;
+    });
+  };
+
+  // Remove all images for a color
+  const removeAllColorImages = colorIndex => {
+    setColorImages(prevColors => {
+      const updatedColors = prevColors.map((color, idx) => {
+        if (idx === colorIndex) {
+          return { ...color, images: [] };
+        }
+        return color;
+      });
+      setChangedColorImages(updatedColors); // Track changed colors
+      return updatedColors;
+    });
   };
 
   const handleFieldChange = (field, value) => {
@@ -872,363 +1097,412 @@ const UpdateImageProducts = ({ navigation, route }) => {
             <View style={styles.colorSection}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionHeaderText}>Color Variants</Text>
-                <TouchableOpacity onPress={() => setShowColorPicker(true)} style={styles.addColorBtn}>
+                <TouchableOpacity
+                  onPress={() => setShowColorPicker(true)}
+                  style={styles.addColorBtn}
+                >
                   <Icon name="palette-swatch" size={16} color="#fff" />
                   <Text style={styles.addColorBtnText}>Add Color</Text>
                 </TouchableOpacity>
               </View>
 
-            {showColorPicker && (
-              <View style={styles.colorPickerCard}>
-                <Text style={styles.sectionTitle}>Select Color:</Text>
-                <View style={styles.pickerWrapper}>
-                  <Picker
-                    selectedValue={newColorId}
-                    onValueChange={itemValue => setNewColorId(itemValue)}
-                    style={styles.picker}
-                    dropdownIconColor="#3b5998"
-                  >
-                    <Picker.Item label="Select Color" value="" />
-                    {availableColors.map(c => (
-                      <Picker.Item key={c.colorId} label={c.colorName} value={c.colorId} />
-                    ))}
-                  </Picker>
-                </View>
-
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (!newColorId) return alert('Please select a color first');
-
-                      // 🚨 Check for duplicate colorId
-                      const isDuplicate = colorImages.some(c => c.colorId === newColorId);
-                      if (isDuplicate) return alert('Color already added!');
-
-                      const selectedColor = availableColors.find(c => c.colorId === newColorId);
-                      if (!selectedColor) return alert('Please select a color first');
-                      const newColor = {
-                        colorId: selectedColor.colorId,
-                        colorName: selectedColor.colorName,
-                        colorCode: selectedColor.colorCode, // ✅ Add this line
-                        images: [],
-                        sizes: [],
-                      };
-
-                      const updatedColors = [...colorImages, newColor];
-                      setColorImages(updatedColors);
-                      setChangedColorImages(updatedColors);
-                      setShowColorPicker(false);
-                      setNewColorId('');
-                    }}
-                    style={styles.actionButton}
-                  >
-                    <LinearGradient
-                      colors={['#2ecc71', '#27ae60']}
-                      style={styles.btnGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
+              {showColorPicker && (
+                <View style={styles.colorPickerCard}>
+                  <Text style={styles.sectionTitle}>Select Color:</Text>
+                  <View style={styles.pickerWrapper}>
+                    <Picker
+                      selectedValue={newColorId}
+                      onValueChange={itemValue => setNewColorId(itemValue)}
+                      style={styles.picker}
+                      dropdownIconColor="#3b5998"
                     >
-                      <Icon name="check" size={16} color="#fff" />
-                      <Text style={styles.actionButtonText}>Confirm</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowColorPicker(false);
-                      setNewColorId('');
-                    }}
-                    style={[styles.actionButton, { marginLeft: 10 }]}
-                  >
-                    <LinearGradient
-                      colors={['#e74c3c', '#c0392b']}
-                      style={styles.btnGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <Icon name="close" size={16} color="#fff" />
-                      <Text style={styles.actionButtonText}>Cancel</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {colorImages.map((color, idx) => (
-              <View key={idx} style={styles.colorCard}>
-                <View style={styles.colorHeaderRow}>
-                  <View style={styles.colorNameContainer}>
-                    <View
-                      style={[styles.colorSwatch, { backgroundColor: color.colorCode || '#000' }]}
-                    />
-                    <Text style={styles.colorName}>{color.colorName}</Text>
+                      <Picker.Item label="Select Color" value="" />
+                      {availableColors.map(c => (
+                        <Picker.Item key={c.colorId} label={c.colorName} value={c.colorId} />
+                      ))}
+                    </Picker>
                   </View>
 
-                  {!color._id && (
+                  <View style={styles.buttonRow}>
                     <TouchableOpacity
                       onPress={() => {
-                        const updatedColors = colorImages.filter((_, i) => i !== idx);
+                        if (!newColorId) return alert('Please select a color first');
+
+                        // 🚨 Check for duplicate colorId
+                        const isDuplicate = colorImages.some(c => c.colorId === newColorId);
+                        if (isDuplicate) return alert('Color already added!');
+
+                        const selectedColor = availableColors.find(c => c.colorId === newColorId);
+                        if (!selectedColor) return alert('Please select a color first');
+                        const newColor = {
+                          colorId: selectedColor.colorId,
+                          colorName: selectedColor.colorName,
+                          colorCode: selectedColor.colorCode, // ✅ Add this line
+                          images: [],
+                          sizes: [],
+                        };
+
+                        const updatedColors = [...colorImages, newColor];
                         setColorImages(updatedColors);
                         setChangedColorImages(updatedColors);
+                        setShowColorPicker(false);
+                        setNewColorId('');
                       }}
-                      style={styles.removeButton}
+                      style={styles.actionButton}
                     >
-                      <Icon name="delete" size={16} color="#fff" />
-                      <Text style={styles.removeButtonText}>Remove</Text>
+                      <LinearGradient
+                        colors={['#2ecc71', '#27ae60']}
+                        style={styles.btnGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                      >
+                        <Icon name="check" size={16} color="#fff" />
+                        <Text style={styles.actionButtonText}>Confirm</Text>
+                      </LinearGradient>
                     </TouchableOpacity>
-                  )}
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowColorPicker(false);
+                        setNewColorId('');
+                      }}
+                      style={[styles.actionButton, { marginLeft: 10 }]}
+                    >
+                      <LinearGradient
+                        colors={['#e74c3c', '#c0392b']}
+                        style={styles.btnGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                      >
+                        <Icon name="close" size={16} color="#fff" />
+                        <Text style={styles.actionButtonText}>Cancel</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
                 </View>
+              )}
 
-                <Text style={styles.subSectionTitle}>Images</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.imagesScrollView}
-                >
-                  {color.images && color.images.length > 0 ? (
-                    <>
-                      {color.images.map((img, i) => (
-                        <View key={i} style={styles.imageItem}>
-                          <Image
-                            source={{
-                              uri:
-                                img.startsWith('http') || img.startsWith('file')
-                                  ? img
-                                  : `https://nodejsapp-hfpl.onrender.com${img}`,
-                            }}
-                            style={styles.colorImage}
-                          />
-                          <TouchableOpacity
-                            onPress={() => replaceColorImage(idx, i)}
-                            style={styles.imageActionBtn}
-                          >
-                            <Icon name="pencil" size={12} color="#fff" />
-                            <Text style={styles.imageActionBtnText}>Replace</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </>
-                  ) : (
-                    <Text style={styles.noImagesText}>No images added yet.</Text>
-                  )}
+              {colorImages.map((color, idx) => (
+                <View key={idx} style={styles.colorCard}>
+                  <View style={styles.colorHeaderRow}>
+                    <View style={styles.colorNameContainer}>
+                      <View
+                        style={[styles.colorSwatch, { backgroundColor: color.colorCode || '#000' }]}
+                      />
+                      <Text style={styles.colorName}>{color.colorName}</Text>
+                    </View>
 
-                  <TouchableOpacity
-                    onPress={async () => {
-                      const result = await ImagePicker.launchImageLibraryAsync({
-                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                        allowsMultipleSelection: true,
-                        quality: 1,
-                      });
-
-                      if (!result.canceled) {
-                        const selectedImages = result.assets.map(asset => asset.uri);
-                        const updatedColors = colorImages.map((c, i) => {
-                          if (i === idx) {
-                            return {
-                              ...c,
-                              images: [...(c.images || []), ...selectedImages],
-                            };
-                          }
-                          return c;
-                        });
-                        setColorImages(updatedColors);
-                        setChangedColorImages(updatedColors);
-                      }
-                    }}
-                    style={styles.addImageCard}
-                  >
-                    <Icon name="image-plus" size={24} color="#3b5998" />
-                    <Text style={styles.addImageCardText}>Add Image</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-
-                <Text style={styles.subSectionTitle}>Size Variants</Text>
-                <View style={styles.sizesContainer}>
-                  <View style={styles.sizeButtonsRow}>
-                    {availableSizes.map(size => {
-                      const existingSizeObj = color.sizes?.find(s => s.size === size);
-                      const isSelected = !!existingSizeObj;
-
-                      return (
-                        <TouchableOpacity
-                          key={size}
-                          onPress={() => {
-                            const updatedColors = colorImages.map((c, i) => {
-                              if (i === idx) {
-                                let newSizes;
-                                if (isSelected) {
-                                  newSizes = c.sizes.filter(s => s.size !== size);
-                                } else {
-                                  newSizes = [
-                                    ...(c.sizes || []),
-                                    {
-                                      size,
-                                      price: 0,
-                                      stock: 0,
-                                      discountper: '0',
-                                      discountprice: 0,
-                                    },
-                                  ];
-                                }
-                                return { ...c, sizes: newSizes };
-                              }
-                              return c;
-                            });
-
-                            setColorImages(updatedColors);
-                            setChangedColorImages(updatedColors);
-                          }}
-                          style={[styles.sizeButton, isSelected ? styles.selectedSizeButton : {}]}
-                        >
-                          <Text
-                            style={{
-                              color: isSelected ? '#fff' : '#333',
-                              fontWeight: isSelected ? 'bold' : 'normal',
-                            }}
-                          >
-                            {size}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+                    {!color._id && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          const updatedColors = colorImages.filter((_, i) => i !== idx);
+                          setColorImages(updatedColors);
+                          setChangedColorImages(updatedColors);
+                        }}
+                        style={styles.removeButton}
+                      >
+                        <Icon name="delete" size={16} color="#fff" />
+                        <Text style={styles.removeButtonText}>Remove</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
-                  {color.sizes?.map((sz, sizeIdx) => (
-                    <View key={sz.size} style={styles.sizeInputRow}>
-                      <View style={styles.sizeLabel}>
-                        <Text style={styles.sizeLabelText}>{sz.size}</Text>
-                      </View>
+                  <View style={styles.imagesSectionHeader}>
+                    <Text style={styles.subSectionTitle}>Images</Text>
+                    {color.images && color.images.length > 0 && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          Alert.alert(
+                            'Remove All Images',
+                            'Are you sure you want to remove all images for this color?',
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Remove All',
+                                style: 'destructive',
+                                onPress: () => removeAllColorImages(idx),
+                              },
+                            ]
+                          );
+                        }}
+                        style={styles.removeAllImagesBtn}
+                      >
+                        <Icon name="delete-sweep" size={14} color="#fff" />
+                        <Text style={styles.removeAllImagesBtnText}>Remove All</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.imagesScrollView}
+                  >
+                    {color.images && color.images.length > 0  ? (
+                      <>
+                        {color.images.map((img, i) => (
+                          <View key={i} style={styles.imageItem}>
+                            <Image
+                              source={{
+                                uri:
+                                  img.startsWith('http') || img.startsWith('file')
+                                    ? img
+                                    : `https://nodejsapp-hfpl.onrender.com${img}`,
+                              }}
+                              style={styles.colorImage}
+                            />
+                            <View style={styles.imageActionButtons}>
+                              <TouchableOpacity
+                                onPress={() => replaceColorImage(idx, i)}
+                                style={[styles.imageActionBtn, styles.replaceBtn]}
+                              >
+                                <Icon name="pencil" size={10} color="#fff" />
+                                <Text style={styles.imageActionBtnText}>Replace</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => {
+                                  Alert.alert(
+                                    'Remove Image',
+                                    'Are you sure you want to remove this image?',
+                                    [
+                                      { text: 'Cancel', style: 'cancel' },
+                                      {
+                                        text: 'Remove',
+                                        style: 'destructive',
+                                        onPress: () => removeColorImage(idx, i),
+                                      },
+                                    ]
+                                  );
+                                }}
+                                style={[styles.imageActionBtn, styles.removeBtn]}
+                              >
+                                <Icon name="delete" size={10} color="#fff" />
+                                <Text style={styles.imageActionBtnText}>Remove</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ))}
+                      </>
+                    ) : (
+                      <Text style={styles.noImagesText}>No images added yet.</Text>
+                    )}
 
-                      <View style={styles.sizeDetailsContainer}>
-                        <View style={styles.priceStockRow}>
-                          <StyledInput
-                            label="Price"
-                            value={sz.price?.toString()}
-                            setValue={val => {
+                    <TouchableOpacity
+                      onPress={async () => {
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                          allowsMultipleSelection: true,
+                          quality: 1,
+                        });
+
+                        if (!result.canceled) {
+                          const selectedImages = result.assets.map(asset => asset.uri);
+                          const updatedColors = colorImages.map((c, i) => {
+                            if (i === idx) {
+                              return {
+                                ...c,
+                                images: [...(c.images || []), ...selectedImages],
+                              };
+                            }
+                            return c;
+                          });
+                          setColorImages(updatedColors);
+                          setChangedColorImages(updatedColors);
+                        }
+                      }}
+                      style={styles.addImageCard}
+                    >
+                      <Icon name="image-plus" size={24} color="#3b5998" />
+                      <Text style={styles.addImageCardText}>Add Image</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+
+                  <Text style={styles.subSectionTitle}>Size Variants</Text>
+                  <View style={styles.sizesContainer}>
+                    <View style={styles.sizeButtonsRow}>
+                      {availableSizes.map(size => {
+                        const existingSizeObj = color.sizes?.find(s => s.size === size);
+                        const isSelected = !!existingSizeObj;
+
+                        return (
+                          <TouchableOpacity
+                            key={size}
+                            onPress={() => {
                               const updatedColors = colorImages.map((c, i) => {
                                 if (i === idx) {
-                                  const newSizes = c.sizes.map((s, j) =>
-                                    j === sizeIdx ? { ...s, price: val } : s
-                                  );
+                                  let newSizes;
+                                  if (isSelected) {
+                                    newSizes = c.sizes.filter(s => s.size !== size);
+                                  } else {
+                                    newSizes = [
+                                      ...(c.sizes || []),
+                                      {
+                                        size,
+                                        price: 0,
+                                        stock: 0,
+                                        discountper: '0',
+                                        discountprice: 0,
+                                      },
+                                    ];
+                                  }
                                   return { ...c, sizes: newSizes };
                                 }
                                 return c;
                               });
-                              setColorImages(updatedColors);
-                              setChangedColorImages(updatedColors);
-                            }}
-                            placeholder="Price"
-                            keyboardType="numeric"
-                          />
 
-                          <StyledInput
-                            label="Stock"
-                            value={sz.stock?.toString()}
-                            setValue={val => {
-                              const updatedColors = colorImages.map((c, i) => {
-                                if (i === idx) {
-                                  const newSizes = c.sizes.map((s, j) =>
-                                    j === sizeIdx ? { ...s, stock: val } : s
-                                  );
-                                  return { ...c, sizes: newSizes };
-                                }
-                                return c;
-                              });
                               setColorImages(updatedColors);
                               setChangedColorImages(updatedColors);
                             }}
-                            placeholder="Stock"
-                            keyboardType="numeric"
-                          />
+                            style={[styles.sizeButton, isSelected ? styles.selectedSizeButton : {}]}
+                          >
+                            <Text
+                              style={{
+                                color: isSelected ? '#fff' : '#333',
+                                fontWeight: isSelected ? 'bold' : 'normal',
+                              }}
+                            >
+                              {size}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    {color.sizes?.map((sz, sizeIdx) => (
+                      <View key={sz.size} style={styles.sizeInputRow}>
+                        <View style={styles.sizeLabel}>
+                          <Text style={styles.sizeLabelText}>{sz.size}</Text>
                         </View>
 
-                        <View style={styles.discountRow}>
-                          <StyledInput
-                            label="Discount"
-                            value={sz.discountper?.toString() || ''}
-                            setValue={val => {
-                              const updatedColors = colorImages.map((c, i) => {
-                                if (i === idx) {
-                                  const newSizes = c.sizes.map((s, j) => {
-                                    if (j === sizeIdx) {
-                                      // Calculate discounted price based on the discount
-                                      let discountprice = '';
-                                      const price = parseFloat(s.price);
+                        <View style={styles.sizeDetailsContainer}>
+                          <View style={styles.priceStockRow}>
+                            <StyledInput
+                              label="Price"
+                              value={sz.price?.toString()}
+                              setValue={val => {
+                                const updatedColors = colorImages.map((c, i) => {
+                                  if (i === idx) {
+                                    const newSizes = c.sizes.map((s, j) =>
+                                      j === sizeIdx ? { ...s, price: val } : s
+                                    );
+                                    return { ...c, sizes: newSizes };
+                                  }
+                                  return c;
+                                });
+                                setColorImages(updatedColors);
+                                setChangedColorImages(updatedColors);
+                              }}
+                              placeholder="Price"
+                              keyboardType="numeric"
+                            />
 
-                                      if (val && !isNaN(price)) {
-                                        if (val.includes('%')) {
-                                          // Percentage discount
-                                          const percent = parseFloat(val);
-                                          if (!isNaN(percent)) {
-                                            const discount = (price * percent) / 100;
-                                            discountprice = (
-                                              price - Math.min(discount, price)
-                                            ).toFixed(2);
-                                          }
-                                        } else {
-                                          // Fixed amount discount
-                                          const amount = parseFloat(val);
-                                          if (!isNaN(amount)) {
-                                            discountprice = (
-                                              price - Math.min(amount, price)
-                                            ).toFixed(2);
+                            <StyledInput
+                              label="Stock"
+                              value={sz.stock?.toString()}
+                              setValue={val => {
+                                const updatedColors = colorImages.map((c, i) => {
+                                  if (i === idx) {
+                                    const newSizes = c.sizes.map((s, j) =>
+                                      j === sizeIdx ? { ...s, stock: val } : s
+                                    );
+                                    return { ...c, sizes: newSizes };
+                                  }
+                                  return c;
+                                });
+                                setColorImages(updatedColors);
+                                setChangedColorImages(updatedColors);
+                              }}
+                              placeholder="Stock"
+                              keyboardType="numeric"
+                            />
+                          </View>
+
+                          <View style={styles.discountRow}>
+                            <StyledInput
+                              label="Discount"
+                              value={sz.discountper?.toString() || ''}
+                              setValue={val => {
+                                const updatedColors = colorImages.map((c, i) => {
+                                  if (i === idx) {
+                                    const newSizes = c.sizes.map((s, j) => {
+                                      if (j === sizeIdx) {
+                                        // Calculate discounted price based on the discount
+                                        let discountprice = '';
+                                        const price = parseFloat(s.price);
+
+                                        if (val && !isNaN(price)) {
+                                          if (val.includes('%')) {
+                                            // Percentage discount
+                                            const percent = parseFloat(val);
+                                            if (!isNaN(percent)) {
+                                              const discount = (price * percent) / 100;
+                                              discountprice = (
+                                                price - Math.min(discount, price)
+                                              ).toFixed(2);
+                                            }
+                                          } else {
+                                            // Fixed amount discount
+                                            const amount = parseFloat(val);
+                                            if (!isNaN(amount)) {
+                                              discountprice = (
+                                                price - Math.min(amount, price)
+                                              ).toFixed(2);
+                                            }
                                           }
                                         }
+
+                                        return {
+                                          ...s,
+                                          discountper: val,
+                                          discountprice: discountprice,
+                                        };
                                       }
+                                      return s;
+                                    });
+                                    return { ...c, sizes: newSizes };
+                                  }
+                                  return c;
+                                });
+                                setColorImages(updatedColors);
+                                setChangedColorImages(updatedColors);
+                              }}
+                              placeholder="% or value"
+                              keyboardType="numeric"
+                            />
 
-                                      return {
-                                        ...s,
-                                        discountper: val,
-                                        discountprice: discountprice,
-                                      };
-                                    }
-                                    return s;
-                                  });
-                                  return { ...c, sizes: newSizes };
-                                }
-                                return c;
-                              });
-                              setColorImages(updatedColors);
-                              setChangedColorImages(updatedColors);
-                            }}
-                            placeholder="% or value"
-                            keyboardType="numeric"
-                          />
-
-                          <StyledInput
-                            label="Final Price"
-                            value={sz.discountprice?.toString() || ''}
-                            setValue={val => {
-                              const updatedColors = colorImages.map((c, i) => {
-                                if (i === idx) {
-                                  const newSizes = c.sizes.map((s, j) =>
-                                    j === sizeIdx ? { ...s, discountprice: val } : s
-                                  );
-                                  return { ...c, sizes: newSizes };
-                                }
-                                return c;
-                              });
-                              setColorImages(updatedColors);
-                              setChangedColorImages(updatedColors);
-                            }}
-                            placeholder="Discounted price"
-                            keyboardType="numeric"
-                            editable={false}
-                          />
+                            <StyledInput
+                              label="Final Price"
+                              value={sz.discountprice?.toString() || ''}
+                              setValue={val => {
+                                const updatedColors = colorImages.map((c, i) => {
+                                  if (i === idx) {
+                                    const newSizes = c.sizes.map((s, j) =>
+                                      j === sizeIdx ? { ...s, discountprice: val } : s
+                                    );
+                                    return { ...c, sizes: newSizes };
+                                  }
+                                  return c;
+                                });
+                                setColorImages(updatedColors);
+                                setChangedColorImages(updatedColors);
+                              }}
+                              placeholder="Discounted price"
+                              keyboardType="numeric"
+                              editable={false}
+                            />
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  ))}
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
           ) : (
             // Multiple Images Section for Non-Clothing Categories
             <View style={styles.multipleImagesSection}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionHeaderText}>Product Images</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={async () => {
                     const result = await ImagePicker.launchImageLibraryAsync({
                       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -1245,11 +1519,11 @@ const UpdateImageProducts = ({ navigation, route }) => {
                         height: asset.height,
                         localPath: asset.uri,
                       }));
-                      
+
                       setMultipleImages([...multipleImages, ...selectedImages]);
                       setChangedMultipleImages([...changedMultipleImages, ...selectedImages]);
                     }
-                  }} 
+                  }}
                   style={styles.addImageBtn}
                 >
                   <Icon name="image-plus" size={16} color="#fff" />
@@ -1259,9 +1533,11 @@ const UpdateImageProducts = ({ navigation, route }) => {
 
               {multipleImages.length > 0 && (
                 <View style={styles.multipleImagesContainer}>
-                  <Text style={styles.subSectionTitle}>Selected Images ({multipleImages.length})</Text>
-                  <ScrollView 
-                    horizontal 
+                  <Text style={styles.subSectionTitle}>
+                    Selected Images ({multipleImages.length})
+                  </Text>
+                  <ScrollView
+                    horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.imagesScrollView}
                   >
@@ -1269,10 +1545,13 @@ const UpdateImageProducts = ({ navigation, route }) => {
                       <View key={index} style={styles.multipleImageItem}>
                         <Image
                           source={{
-                            uri: img.uri || img.cloudinaryUrl || 
-                              (typeof img === 'string' && (img.startsWith('http') || img.startsWith('file')) 
-                                ? img 
-                                : `https://nodejsapp-hfpl.onrender.com${img}`)
+                            uri:
+                              img.uri ||
+                              img.cloudinaryUrl ||
+                              (typeof img === 'string' &&
+                              (img.startsWith('http') || img.startsWith('file'))
+                                ? img
+                                : `https://nodejsapp-hfpl.onrender.com${img}`),
                           }}
                           style={styles.multipleImage}
                         />
@@ -1283,17 +1562,19 @@ const UpdateImageProducts = ({ navigation, route }) => {
                                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                                 quality: 1,
                               });
-                          
+
                               if (!result.canceled) {
                                 const newImage = {
                                   uri: result.assets[0].uri,
-                                  fileName: result.assets[0].fileName || result.assets[0].uri.split('/').pop(),
+                                  fileName:
+                                    result.assets[0].fileName ||
+                                    result.assets[0].uri.split('/').pop(),
                                   fileSize: result.assets[0].fileSize,
                                   width: result.assets[0].width,
                                   height: result.assets[0].height,
                                   localPath: result.assets[0].uri,
                                 };
-                                
+
                                 const updatedImages = [...multipleImages];
                                 updatedImages[index] = newImage;
                                 setMultipleImages(updatedImages);
@@ -1304,7 +1585,7 @@ const UpdateImageProducts = ({ navigation, route }) => {
                           >
                             <Icon name="pencil" size={10} color="#fff" />
                           </TouchableOpacity>
-                          
+
                           <TouchableOpacity
                             onPress={() => {
                               const updatedImages = multipleImages.filter((_, i) => i !== index);
@@ -1316,13 +1597,13 @@ const UpdateImageProducts = ({ navigation, route }) => {
                             <Icon name="delete" size={10} color="#fff" />
                           </TouchableOpacity>
                         </View>
-                        
+
                         <Text style={styles.imageFileName} numberOfLines={1}>
                           {img.fileName || 'image'}
                         </Text>
                       </View>
                     ))}
-                    
+
                     {/* Add more images button within the scroll view */}
                     <TouchableOpacity
                       onPress={async () => {
@@ -1341,7 +1622,7 @@ const UpdateImageProducts = ({ navigation, route }) => {
                             height: asset.height,
                             localPath: asset.uri,
                           }));
-                          
+
                           setMultipleImages([...multipleImages, ...selectedImages]);
                           setChangedMultipleImages([...changedMultipleImages, ...selectedImages]);
                         }
@@ -1354,7 +1635,7 @@ const UpdateImageProducts = ({ navigation, route }) => {
                   </ScrollView>
                 </View>
               )}
-              
+
               {multipleImages.length === 0 && (
                 <View style={styles.emptyImagesContainer}>
                   <Icon name="image-off-outline" size={48} color="#a0aec0" />
@@ -1366,18 +1647,33 @@ const UpdateImageProducts = ({ navigation, route }) => {
           )}
 
           <TouchableOpacity
-            style={styles.btnUpdate}
+            style={[styles.btnUpdate, (isSubmitting || showSuccess) && styles.btnUpdateDisabled]}
             onPress={handleUploadChanges}
             activeOpacity={0.8}
+            disabled={isSubmitting || showSuccess}
           >
             <LinearGradient
-              colors={['#1e3c72', '#2a5298']}
+              colors={showSuccess ? ['#2ecc71', '#27ae60'] : ['#1e3c72', '#2a5298']}
               style={styles.updateBtnGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Icon name="content-save-all" size={20} color="#fff" />
-              <Text style={styles.btnUpdateText}>UPDATE PRODUCT IMAGES</Text>
+              {isSubmitting ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 10 }} />
+                  <Text style={styles.btnUpdateText}>UPDATING...</Text>
+                </>
+              ) : showSuccess ? (
+                <>
+                  <Icon name="check-circle" size={20} color="#fff" />
+                  <Text style={styles.btnUpdateText}>UPDATED SUCCESSFULLY!</Text>
+                </>
+              ) : (
+                <>
+                  <Icon name="content-save-all" size={20} color="#fff" />
+                  <Text style={styles.btnUpdateText}>UPDATE PRODUCT IMAGES</Text>
+                </>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
@@ -1800,6 +2096,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
     marginVertical: 10,
   },
+  btnUpdateDisabled: {
+    opacity: 0.9,
+  },
   updateBtnGradient: {
     height: 50,
     borderRadius: 25,
@@ -2008,6 +2307,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     marginTop: 5,
+    textAlign: 'center',
+  },
+  // New styles for image management buttons
+  imagesSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  removeAllImagesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dc3545',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  removeAllImagesBtnText: {
+    color: '#fff',
+    fontSize: 11,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  imageActionButtons: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  replaceBtn: {
+    backgroundColor: '#3182ce',
+    marginBottom: 4,
+  },
+  removeBtn: {
+    backgroundColor: '#e53e3e',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#a0aec0',
     textAlign: 'center',
   },
 });

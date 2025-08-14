@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Layout from '../components/Layout/Layout';
 import CartItem from '../components/Cart/CartItem';
 import PriceTable from '../components/Cart/PriceTable';
-import { clearCart, clearError, clearMessage, getCart } from '../redux/features/auth/cartActions';
+import { clearCart, clearError, clearMessage, getCart, removeFromCart } from '../redux/features/auth/cartActions';
+import { getAllProducts } from '../redux/features/auth/productActions';
 import { LinearGradient } from 'expo-linear-gradient';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Feather from 'react-native-vector-icons/Feather';
@@ -13,9 +14,13 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 const Cart = ({ navigation }) => {
   const dispatch = useDispatch();
   const { items } = useSelector(state => state.cart);
+  const { products } = useSelector(state => state.product);
+  const [outOfStockItems, setOutOfStockItems] = useState([]);
+  const [validCartItems, setValidCartItems] = useState([]);
 
   useEffect(() => {
     dispatch(getCart());
+    dispatch(getAllProducts());
   }, []);
 
   useEffect(() => {
@@ -23,8 +28,90 @@ const Cart = ({ navigation }) => {
     dispatch(clearMessage());
   }, [dispatch]);
 
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const cartItems = items;
+  // Check stock availability for cart items
+  useEffect(() => {
+    if (items && items.length > 0 && products && products.length > 0) {
+      const outOfStock = [];
+      const inStock = [];
+      
+      items.forEach(cartItem => {
+        // Find the product in the products list
+        const product = products.find(p => p._id === cartItem.productId?._id);
+        
+        if (product) {
+          let isAvailable = false;
+          let availableStock = 0;
+          
+          // Check if product is clothing with sizes
+          if (cartItem.size && cartItem.color && product.colors) {
+            // Find the specific color
+            const colorData = product.colors.find(c => c.colorName === cartItem.color);
+            if (colorData && colorData.sizes) {
+              // Find the specific size
+              const sizeData = colorData.sizes.find(s => s.size === cartItem.size);
+              if (sizeData) {
+                availableStock = sizeData.stock || 0;
+                isAvailable = availableStock > 0;
+              }
+            }
+          } else {
+            // For non-clothing products, check general stock
+            availableStock = product.stock || 0;
+            isAvailable = availableStock > 0;
+          }
+          
+          if (!isAvailable) {
+            outOfStock.push(cartItem);
+          } else if (cartItem.quantity > availableStock) {
+            // Item is in stock but quantity exceeds available stock
+            Alert.alert(
+              'Stock Limited',
+              `${cartItem.name} has only ${availableStock} items in stock. Quantity adjusted.`,
+              [{ text: 'OK' }]
+            );
+            // You could dispatch an action here to update quantity to available stock
+            inStock.push({ ...cartItem, maxStock: availableStock });
+          } else {
+            inStock.push({ ...cartItem, maxStock: availableStock });
+          }
+        } else {
+          // Product not found in products list
+          outOfStock.push(cartItem);
+        }
+      });
+      
+      setOutOfStockItems(outOfStock);
+      setValidCartItems(inStock);
+      
+      // Automatically remove out-of-stock items
+      if (outOfStock.length > 0) {
+        const itemNames = outOfStock.map(item => item.name).join(', ');
+        Alert.alert(
+          'Out of Stock',
+          `The following items are out of stock and will be removed: ${itemNames}`,
+          [
+            {
+              text: 'Remove',
+              onPress: () => {
+                outOfStock.forEach(item => {
+                  dispatch(removeFromCart(item.productId?._id));
+                });
+              },
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+          ]
+        );
+      }
+    } else {
+      setValidCartItems(items || []);
+    }
+  }, [items, products, dispatch]);
+
+  const total = (validCartItems || []).reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartItems = validCartItems || [];
 
   return (
     <Layout showBackButton={true}>
@@ -83,7 +170,17 @@ const Cart = ({ navigation }) => {
             <Text style={styles.sectionTitle}>Cart Items</Text>
 
             {cartItems.map(item => (
-              <CartItem item={item} key={item._id} />
+              <View key={item._id}>
+                <CartItem item={item} />
+                {item.maxStock && item.quantity > item.maxStock && (
+                  <View style={styles.stockWarning}>
+                    <Feather name="alert-circle" size={14} color="#F59E0B" />
+                    <Text style={styles.stockWarningText}>
+                      Only {item.maxStock} available in stock
+                    </Text>
+                  </View>
+                )}
+              </View>
             ))}
 
             <Text style={styles.sectionTitle}>Order Summary</Text>
@@ -331,6 +428,24 @@ const styles = StyleSheet.create({
   footerText: {
     color: '#a0aec0',
     fontSize: 12,
+  },
+  stockWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginHorizontal: 15,
+    marginTop: -8,
+    marginBottom: 8,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  stockWarningText: {
+    color: '#92400E',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 6,
   },
 });
 

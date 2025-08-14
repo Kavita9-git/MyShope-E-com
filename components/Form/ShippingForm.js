@@ -10,6 +10,7 @@ import {
   Alert,
   TextInput,
   BackHandler,
+  Platform,
 } from "react-native";
 import InputBox from "./InputBox";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -382,6 +383,29 @@ const ShippingForm = ({
     setShowAddressOptions(!showAddressOptions);
   };
 
+  // Close address options when clicking outside (web compatibility)
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showAddressOptions) {
+        // For web, close dropdown when clicking outside
+        setShowAddressOptions(false);
+      }
+    };
+
+    // Only add document event listener if we're in a web environment
+    if (typeof window !== 'undefined' && typeof document !== 'undefined' && showAddressOptions) {
+      try {
+        document.addEventListener('click', handleClickOutside);
+        return () => {
+          document.removeEventListener('click', handleClickOutside);
+        };
+      } catch (error) {
+        // Silently handle any errors in case document is not available
+        console.warn('Document event listener not supported in this environment');
+      }
+    }
+  }, [showAddressOptions]);
+
   // Render a saved address item
   const renderAddressItem = ({ item }) => (
     <TouchableOpacity
@@ -423,19 +447,32 @@ const ShippingForm = ({
         </Text>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.addressOptionsButton}
-            onPress={toggleAddressOptions}
-          >
-            <Icon name="dots-horizontal" size={20} color="#1e3c72" />
-          </TouchableOpacity>
+          <View style={styles.dropdownContainer}>
+            <TouchableOpacity
+              style={styles.addressOptionsButton}
+              onPress={toggleAddressOptions}
+            >
+              <Icon name="dots-horizontal" size={20} color="#1e3c72" />
+            </TouchableOpacity>
 
-          {showAddressOptions && (
-            <View style={styles.addressOptionsDropdown}>
+            {showAddressOptions && (
+            <View 
+              style={styles.addressOptionsDropdown}
+              onStartShouldSetResponder={() => true}
+              onResponderGrant={(evt) => {
+                // Prevent event from bubbling up on web
+                if (typeof evt.stopPropagation === 'function') {
+                  evt.stopPropagation();
+                }
+              }}
+            >
               {savedAddresses.length > 0 && (
                 <TouchableOpacity
                   style={styles.addressOptionItem}
-                  onPress={() => {
+                  onPress={(evt) => {
+                    if (typeof evt?.stopPropagation === 'function') {
+                      evt.stopPropagation();
+                    }
                     setShowAddressModal(true);
                     setShowAddressOptions(false);
                   }}
@@ -446,7 +483,10 @@ const ShippingForm = ({
               )}
               <TouchableOpacity
                 style={styles.addressOptionItem}
-                onPress={() => {
+                onPress={(evt) => {
+                  if (typeof evt?.stopPropagation === 'function') {
+                    evt.stopPropagation();
+                  }
                   createNewAddress();
                   setShowAddressOptions(false);
                 }}
@@ -457,7 +497,10 @@ const ShippingForm = ({
               {currentFormComplete && (
                 <TouchableOpacity
                   style={styles.addressOptionItem}
-                  onPress={() => {
+                  onPress={(evt) => {
+                    if (typeof evt?.stopPropagation === 'function') {
+                      evt.stopPropagation();
+                    }
                     saveCurrentAddress();
                     setShowAddressOptions(false);
                   }}
@@ -468,6 +511,7 @@ const ShippingForm = ({
               )}
             </View>
           )}
+          </View>
 
           {savedAddresses.length > 0 && (
             <TouchableOpacity
@@ -875,24 +919,50 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginRight: 10,
   },
+  dropdownContainer: {
+    position: "relative",
+    marginRight: 8,
+    // Platform-specific z-index values
+    zIndex: Platform.OS === 'web' ? 999999 : 100,
+    elevation: Platform.OS === 'android' ? 100 : 999999,
+  },
   addressOptionsButton: {
     padding: 8,
-    marginRight: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(30, 60, 114, 0.1)",
   },
   addressOptionsDropdown: {
     position: "absolute",
     top: 40,
     right: 0,
-    backgroundColor: "white",
+    backgroundColor: "#ffffff",
     borderRadius: 8,
-    padding: 8,
+    padding: 12,
     width: 180,
+    minHeight: 50,
+    // Strong borders and shadows for maximum visibility
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    zIndex: 1000,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    // Platform-specific z-index and elevation values
+    elevation: Platform.OS === 'android' ? 50 : 999999,
+    zIndex: Platform.OS === 'web' ? 999999 : 50,
+    // Force visibility on web
+    opacity: 1,
+    display: "flex",
+    // Additional web-specific properties
+    ...(Platform.OS === 'web' && typeof window !== 'undefined' && {
+      position: 'fixed',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.15)',
+      border: '2px solid #e0e0e0',
+      backgroundColor: '#ffffff',
+      zIndex: 999999,
+      visibility: 'visible',
+      pointerEvents: 'auto',
+    }),
   },
   addressOptionItem: {
     flexDirection: "row",
