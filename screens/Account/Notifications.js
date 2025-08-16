@@ -52,11 +52,35 @@ const Notifications = () => {
         return;
       }
 
-      const tokenData = await ExpoNotifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas?.projectId || Constants.expoConfig?.projectId,
-      });
+      // Enhanced error handling for token retrieval
+      let tokenData;
+      let token;
+      
+      try {
+        tokenData = await ExpoNotifications.getExpoPushTokenAsync({
+          projectId: Constants.expoConfig?.extra?.eas?.projectId || Constants.expoConfig?.projectId,
+        });
+        token = tokenData.data;
+      } catch (tokenError) {
+        console.error('Token retrieval error:', tokenError);
+        
+        // Handle Firebase-related errors specifically
+        if (tokenError.message.includes('FirebaseApp') || tokenError.message.includes('firebase')) {
+          Alert.alert(
+            'Configuration Issue',
+            'There seems to be a Firebase configuration conflict. This is likely due to running in development mode.\n\nSolutions:\n1. Try restarting the app\n2. Clear app data and restart\n3. Use EAS Development Build for production-like testing',
+            [
+              { text: 'Try Local Notification', onPress: testNotification },
+              { text: 'OK' }
+            ]
+          );
+          return;
+        }
+        
+        // Re-throw other errors
+        throw tokenError;
+      }
 
-      const token = tokenData.data;
       setPushToken(token);
 
       console.log('🎯 YOUR EXPO PUSH TOKEN:', token);
@@ -79,7 +103,15 @@ const Notifications = () => {
 
     } catch (error) {
       console.error('Error getting push token:', error);
-      Alert.alert('Error', 'Failed to get push token: ' + error.message);
+      
+      // More specific error handling
+      let errorMessage = 'Failed to get push token: ' + error.message;
+      
+      if (error.message.includes('FirebaseApp')) {
+        errorMessage = 'Firebase configuration issue detected. This usually happens in development mode. Try using EAS Development Build or test with local notifications instead.';
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }

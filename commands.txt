@@ -4,6 +4,9 @@ npm install react-dom@19.0.0 react-native-web@0.20.0 @expo/metro-runtime@~5.0.4 
 //to make android preview build
 eas build -p android --profile preview
 
+//to make android production build
+eas build --platform android --profile production
+
 
 /uploads/products/files-1751657415720-8736668.jpeg
 

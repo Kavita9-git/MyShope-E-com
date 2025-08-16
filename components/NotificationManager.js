@@ -46,7 +46,7 @@ const NotificationManager = ({ navigation }) => {
       if (!userData) return;
       
       const { user, token } = JSON.parse(userData);
-      const response = await fetch(`http://localhost:8080/api/v1/notification/user/${user._id}`, {
+      const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/user/${user._id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ const NotificationManager = ({ navigation }) => {
       if (!userData) return;
       
       const { token } = JSON.parse(userData);
-      const response = await fetch('http://localhost:8080/api/v1/user/profile', {
+      const response = await fetch('https://nodejsapp-hfpl.onrender.com/api/v1/user/profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ const NotificationManager = ({ navigation }) => {
       if (!userData) return;
       
       const { token } = JSON.parse(userData);
-      const response = await fetch('http://localhost:8080/api/v1/notification/preferences', {
+      const response = await fetch('https://nodejsapp-hfpl.onrender.com/api/v1/notification/preferences', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -121,7 +121,7 @@ const NotificationManager = ({ navigation }) => {
       if (!userData) return;
       
       const { token } = JSON.parse(userData);
-      const response = await fetch(`http://localhost:8080/api/v1/notification/read/${notificationId}`, {
+      const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/read/${notificationId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
