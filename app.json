@@ -18,6 +18,7 @@
       "supportsTablet": true
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "package": "com.adankyserver2.client",
       "permissions": [
         "CAMERA",
