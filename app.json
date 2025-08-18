@@ -39,7 +39,7 @@
       "usesCleartextTraffic": true,
       "networkSecurityConfig": "./network_security_config.xml",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon-1024-1024.png",
         "backgroundColor": "#ffffff"
       }
     },
@@ -56,7 +56,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/icon-1024-1024.png",
           "color": "#ffffff",
           "defaultChannel": "default"
         }

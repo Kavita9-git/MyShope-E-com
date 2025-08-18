@@ -148,10 +148,10 @@ class NotificationService {
   async sendTokenToBackend(token) {
     try {
       // Get user info from AsyncStorage
-      const userInfo = await AsyncStorage.getItem('@auth');
+      const userInfo = await AsyncStorage.getItem('userData');
       const user = userInfo ? JSON.parse(userInfo) : null;
       
-      const response = await axios.post('http://192.168.1.100:8080/api/v1/notifications/register-token', {
+      const response = await axios.post('https://nodejsapp-hfpl.onrender.com/api/v1/notification/register-push-token', {
         pushToken: token,
         userId: user?.user?._id || null,
         deviceInfo: {
@@ -249,11 +249,11 @@ class NotificationService {
       await AsyncStorage.setItem('@notification_preferences', JSON.stringify(preferences));
       
       // Send to backend
-      const userInfo = await AsyncStorage.getItem('@auth');
+      const userInfo = await AsyncStorage.getItem('userData');
       const user = userInfo ? JSON.parse(userInfo) : null;
       
       if (user?.user?._id) {
-        await axios.put('http://192.168.1.100:8080/api/v1/notifications/preferences', {
+        await axios.put('https://nodejsapp-hfpl.onrender.com/api/v1/notification/preferences', {
           userId: user.user._id,
           preferences
         });
