@@ -26,6 +26,13 @@
         "INTERNET",
         "ACCESS_NETWORK_STATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE"
       ],
       "usesCleartextTraffic": true,
@@ -45,6 +52,12 @@
     },
     "plugins": [
       "expo-dev-client"
-    ]
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/249536e3-7aad-4029-87a4-940273800b63"
+    }
   }
 }
