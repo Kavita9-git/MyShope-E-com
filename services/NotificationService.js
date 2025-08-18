@@ -103,26 +103,42 @@ class NotificationService {
       }
       
       if (finalStatus !== 'granted') {
-        alert('Failed to get push token for push notification!');
-        return;
+        console.log('❌ Push notification permissions not granted');
+        return null;
       }
       
-      // Get the token
-      token = (await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas?.projectId || Constants.expoConfig?.projectId,
-      })).data;
-      
-      console.log('📱 Push token:', token);
-      
-      // Store token locally
-      await AsyncStorage.setItem('@push_token', token);
-      this.token = token;
-      
-      // Send token to backend
-      await this.sendTokenToBackend(token);
+      try {
+        // Get the token
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.expoConfig?.projectId;
+        
+        if (!projectId) {
+          console.log('⚠️ No project ID found, cannot get push token');
+          return null;
+        }
+        
+        token = (await Notifications.getExpoPushTokenAsync({
+          projectId: projectId,
+        })).data;
+        
+        console.log('📱 Push token obtained successfully');
+        
+        // Store token locally
+        await AsyncStorage.setItem('@push_token', token);
+        this.token = token;
+        
+        // Send token to backend
+        await this.sendTokenToBackend(token);
+        
+      } catch (error) {
+        console.log('⚠️ Could not get push token:', error.message);
+        if (error.message.includes('Firebase')) {
+          console.log('ℹ️ Firebase is not configured for this development build. Push notifications will be limited to local notifications only.');
+        }
+        return null;
+      }
       
     } else {
-      alert('Must use physical device for Push Notifications');
+      console.log('⚠️ Push notifications require a physical device');
     }
 
     return token;

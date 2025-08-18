@@ -40,7 +40,7 @@ import { ActivityIndicator, View } from 'react-native';
 import axios from 'axios';
 import CategoryProducts from './screens/CategoryProducts';
 import ManageUsers from './screens/Admin/ManageUsers';
-import { NotificationService } from './services/NotificationService';
+import notificationService from './services/NotificationService';
 
 //routes
 const Stack = createNativeStackNavigator();
@@ -104,7 +104,6 @@ export default function Main() {
     const initializeNotifications = async () => {
       console.log('🔔 Initializing notifications...');
       try {
-        const notificationService = new NotificationService();
         await notificationService.initialize();
         console.log('✅ NotificationService initialized successfully');
       } catch (error) {
