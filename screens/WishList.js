@@ -28,6 +28,9 @@ import { useNavigation } from "@react-navigation/native";
 import { clearError, clearMessage } from "../redux/features/auth/cartActions";
 import Toast from "../components/Message/Toast";
 import useToast from "../hooks/useToast";
+import notificationService from "../services/NotificationService";
+import { getAllProducts } from "../redux/features/auth/productActions";
+import NotificationTriggers from "../utils/NotificationTriggers";
 
 const WishList = () => {
   const navigation = useNavigation();
@@ -35,10 +38,12 @@ const WishList = () => {
   const { wishlistItems = [], loading, error, message = "" } = useSelector(
     (state) => state.wishlist || {}
   );
+  const { products = [] } = useSelector(state => state.product || {});
   const { toast, showSuccess, showError, hideToast } = useToast();
 
   // Local state for handling UI feedback
   const [removingItemId, setRemovingItemId] = useState(null);
+  const [previousPrices, setPreviousPrices] = useState({});
 
   // Load wishlist data from Redux and clear any previous errors
   useEffect(() => {
@@ -48,8 +53,9 @@ const WishList = () => {
     dispatch(clearMessage());
     dispatch(clearError());
 
-    // Then fetch the wishlist
+    // Then fetch the wishlist and products
     dispatch(getWishlist());
+    dispatch(getAllProducts());
 
     return () => {
       // Clean up when unmounting
@@ -57,6 +63,22 @@ const WishList = () => {
       dispatch(clearWishlistMessage());
     };
   }, [dispatch]);
+
+  // Production-ready wishlist price monitoring
+  useEffect(() => {
+    if (wishlistItems && wishlistItems.length > 0) {
+      console.log('💝 Setting up production wishlist price monitoring');
+      NotificationTriggers.monitorWishlistPrices(wishlistItems, 'current_user');
+    } else {
+      // Clean up monitoring when wishlist is empty
+      NotificationTriggers.cleanup();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      NotificationTriggers.cleanup();
+    };
+  }, [wishlistItems]);
 
   // Show success messages with toast
   useEffect(() => {

@@ -128,8 +128,9 @@ const ProductsCard = ({ p }) => {
       try {
         setIsAddingToCart(true);
 
-        // Check if product has stock
-        if (p.stock <= 0) {
+        // Check if product has stock (handle both 'stock' and 'quantity' fields)
+        const availableStock = p.stock || p.quantity || 0;
+        if (availableStock <= 0) {
           setErrorMessage("Sorry, this item is out of stock");
           setIsAddingToCart(false);
           return;
@@ -349,15 +350,23 @@ const ProductsCard = ({ p }) => {
 
           <View style={styles.priceRow}>
             <Text style={styles.cardPrice}>₹ {p?.price}</Text>
-            {p?.stock <= 5 && p?.stock > 0 ? (
-              <View style={styles.stockBadge}>
-                <Text style={styles.stockText}>Only {p?.stock} left</Text>
-              </View>
-            ) : p?.stock <= 0 ? (
-              <View style={[styles.stockBadge, styles.outOfStockBadge]}>
-                <Text style={styles.stockText}>Out of stock</Text>
-              </View>
-            ) : null}
+            {(() => {
+              const availableStock = p?.stock || p?.quantity || 0;
+              if (availableStock <= 5 && availableStock > 0) {
+                return (
+                  <View style={styles.stockBadge}>
+                    <Text style={styles.stockText}>Only {availableStock} left</Text>
+                  </View>
+                );
+              } else if (availableStock <= 0) {
+                return (
+                  <View style={[styles.stockBadge, styles.outOfStockBadge]}>
+                    <Text style={styles.stockText}>Out of stock</Text>
+                  </View>
+                );
+              }
+              return null;
+            })()}
           </View>
 
           <View style={styles.ratingContainer}>
@@ -390,14 +399,14 @@ const ProductsCard = ({ p }) => {
             <TouchableOpacity
               style={[
                 styles.cartButton,
-                p?.stock <= 0 && styles.disabledButton,
+                (p?.stock || p?.quantity || 0) <= 0 && styles.disabledButton,
               ]}
               onPress={handleCartPress}
-              disabled={isAddingToCart || p?.stock <= 0}
+              disabled={isAddingToCart || (p?.stock || p?.quantity || 0) <= 0}
             >
               <LinearGradient
                 colors={
-                  p?.stock <= 0
+                  (p?.stock || p?.quantity || 0) <= 0
                     ? ["#cccccc", "#999999"]
                     : ["#1e3c72", "#2a5298"]
                 }

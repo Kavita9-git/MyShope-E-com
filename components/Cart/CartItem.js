@@ -23,6 +23,7 @@ const CartItem = ({ item }) => {
   const [isRemoving, setIsRemoving] = useState(false);
   const { toast, showSuccess, showError, hideToast } = useToast();
 
+  console.log('cartitem item', item);
   // Track last action timestamp to prevent rapid clicking
   const [lastActionTime, setLastActionTime] = useState(0);
 
@@ -109,11 +110,12 @@ const CartItem = ({ item }) => {
           style={styles.imageContainer}
         >
           <Image
-            // source={{ uri: item?.image }}
             source={{
-              uri: item?.image.startsWith('http')
-                ? item?.image
-                : `https://nodejsapp-hfpl.onrender.com${item?.image}`,
+              uri: item?.productId?.images && item?.productId?.images[0]?.url
+                ? item?.productId?.images[0]?.url
+                : item?.image?.startsWith('http')
+                  ? item?.image
+                  : `https://nodejsapp-hfpl.onrender.com${item?.image || ''}`
             }}
             style={styles.image}
           />

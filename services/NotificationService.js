@@ -19,6 +19,8 @@ class NotificationService {
     this.notificationListener = null;
     this.responseListener = null;
     this.token = null;
+    this.navigationHandler = null;
+    this.pendingNavigation = null;
   }
 
   // Initialize notification service
@@ -151,7 +153,7 @@ class NotificationService {
       const userInfo = await AsyncStorage.getItem('userData');
       const user = userInfo ? JSON.parse(userInfo) : null;
       
-      const response = await axios.post('https://nodejsapp-hfpl.onrender.com/api/v1/notification/register-push-token', {
+      const response = await axios.post('https://nodejsapp-hfpl.onrender.com/api/v1/notification/register-token', {
         pushToken: token,
         userId: user?.user?._id || null,
         deviceInfo: {
@@ -189,33 +191,62 @@ class NotificationService {
     const { title, body, data } = notification.request.content;
     
     // Show custom in-app notification or update UI
-    console.log('Foreground notification:', { title, body, data });
+    console.log('📬 Foreground notification:', { title, body, data });
     
-    // You can dispatch Redux actions here to update UI
-    // store.dispatch(addNotification({ title, body, data, timestamp: Date.now() }));
+    // Create a notification object
+    const notificationData = {
+      id: notification.request.identifier,
+      title,
+      body,
+      data,
+      timestamp: Date.now(),
+      read: false,
+      type: data?.type || 'general'
+    };
+    
+    // Store notification locally
+    this.storeNotificationLocally(notificationData);
+    
+    // Show in-app toast/alert for foreground notifications
+    this.showInAppNotification(notificationData);
   }
 
   // Handle notification tap/response
   handleNotificationResponse(response) {
     const { data } = response.notification.request.content;
     
+    console.log('📱 Handling notification tap:', data?.type);
+    
+    // Store navigation data for the app to handle
+    this.pendingNavigation = {
+      type: data?.type || 'general',
+      data: data,
+      timestamp: Date.now()
+    };
+    
     // Navigate based on notification type
     switch (data?.type) {
+      case 'order_confirmation':
       case 'order_update':
-        // Navigate to order details
-        console.log('Navigate to order:', data.orderId);
+        console.log('🚀 Navigate to order:', data.orderId);
         break;
       case 'new_product':
-        // Navigate to product details
-        console.log('Navigate to product:', data.productId);
+      case 'product_recommendation':
+        console.log('🚀 Navigate to product:', data.productId);
         break;
       case 'cart_abandonment':
-        // Navigate to cart
-        console.log('Navigate to cart');
+        console.log('🚀 Navigate to cart');
+        break;
+      case 'price_drop':
+      case 'back_in_stock':
+        console.log('🚀 Navigate to product:', data.productId);
+        break;
+      case 'promotion':
+      case 'marketing':
+        console.log('🚀 Navigate to home/promotions');
         break;
       default:
-        // Navigate to home or notifications list
-        console.log('Navigate to home');
+        console.log('🚀 Navigate to notifications');
         break;
     }
   }
@@ -265,6 +296,139 @@ class NotificationService {
     }
   }
 
+  // Store notification locally for in-app display
+  async storeNotificationLocally(notificationData) {
+    try {
+      const existingNotifications = await AsyncStorage.getItem('@local_notifications');
+      const notifications = existingNotifications ? JSON.parse(existingNotifications) : [];
+      
+      // Add new notification to the beginning
+      notifications.unshift(notificationData);
+      
+      // Keep only latest 100 notifications
+      const limitedNotifications = notifications.slice(0, 100);
+      
+      await AsyncStorage.setItem('@local_notifications', JSON.stringify(limitedNotifications));
+      console.log('📱 Notification stored locally');
+    } catch (error) {
+      console.error('❌ Error storing notification locally:', error);
+    }
+  }
+
+  // Get locally stored notifications
+  async getLocalNotifications() {
+    try {
+      const notifications = await AsyncStorage.getItem('@local_notifications');
+      return notifications ? JSON.parse(notifications) : [];
+    } catch (error) {
+      console.error('❌ Error getting local notifications:', error);
+      return [];
+    }
+  }
+
+  // Show in-app notification (for foreground notifications)
+  showInAppNotification(notificationData) {
+    // This will be handled by the Toast system or custom in-app notification
+    console.log('🔔 Showing in-app notification:', notificationData.title);
+    
+    // You can integrate with react-native-toast-message here
+    // Toast.show({
+    //   type: 'info',
+    //   text1: notificationData.title,
+    //   text2: notificationData.body,
+    //   visibilityTime: 4000,
+    // });
+  }
+
+  // Mark notification as read
+  async markNotificationAsRead(notificationId) {
+    try {
+      const notifications = await this.getLocalNotifications();
+      const updatedNotifications = notifications.map(notif => 
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      );
+      
+      await AsyncStorage.setItem('@local_notifications', JSON.stringify(updatedNotifications));
+      console.log('✅ Notification marked as read');
+    } catch (error) {
+      console.error('❌ Error marking notification as read:', error);
+    }
+  }
+
+  // Get unread notification count (excluding test notifications)
+  async getUnreadCount() {
+    try {
+      const notifications = await this.getLocalNotifications();
+      console.log('📱 All local notifications:', notifications.length);
+      
+      // Filter out test notifications and count only unread real notifications
+      const realUnreadNotifications = notifications.filter(notif => {
+        const isTestNotification = 
+          notif.data?.test === true ||
+          notif.title?.toLowerCase().includes('test') ||
+          notif.body?.toLowerCase().includes('test');
+        
+        const isUnread = !notif.read;
+        
+        console.log(`📋 Local notification: "${notif.title}" - Read: ${!!notif.read}, Test: ${isTestNotification}, Unread: ${isUnread}`);
+        
+        return isUnread && !isTestNotification;
+      });
+      
+      const unreadCount = realUnreadNotifications.length;
+      console.log('📱 Local unread count calculated (excluding tests):', unreadCount);
+      return unreadCount;
+    } catch (error) {
+      console.error('❌ Error getting unread count:', error);
+      return 0;
+    }
+  }
+
+  // Clear all notifications
+  async clearAllNotifications() {
+    try {
+      await AsyncStorage.removeItem('@local_notifications');
+      console.log('🗑️ All notifications cleared');
+    } catch (error) {
+      console.error('❌ Error clearing notifications:', error);
+    }
+  }
+
+  // Set navigation handler (to be called from App.js)
+  setNavigationHandler(handler) {
+    this.navigationHandler = handler;
+    console.log('📱 Navigation handler set for notifications');
+  }
+
+  // Execute pending navigation
+  executePendingNavigation() {
+    if (this.pendingNavigation && this.navigationHandler) {
+      const { type, data } = this.pendingNavigation;
+      console.log('🚀 Executing pending navigation:', type);
+      
+      // Clear pending navigation
+      const navData = this.pendingNavigation;
+      this.pendingNavigation = null;
+      
+      // Execute navigation based on type
+      try {
+        this.navigationHandler(navData);
+      } catch (error) {
+        console.error('❌ Error executing navigation:', error);
+      }
+    }
+  }
+
+  // Get pending navigation data
+  getPendingNavigation() {
+    return this.pendingNavigation;
+  }
+
+  // Clear pending navigation
+  clearPendingNavigation() {
+    this.pendingNavigation = null;
+  }
+
   // Cleanup listeners
   cleanup() {
     if (this.notificationListener) {
@@ -273,6 +437,8 @@ class NotificationService {
     if (this.responseListener) {
       Notifications.removeNotificationSubscription(this.responseListener);
     }
+    this.navigationHandler = null;
+    this.pendingNavigation = null;
   }
 }
 

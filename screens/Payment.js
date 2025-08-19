@@ -17,6 +17,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import InputBox from '../components/Form/InputBox';
 import Toast from '../components/Message/Toast';
 import useToast from '../hooks/useToast';
+import notificationService from '../services/NotificationService';
+import NotificationTriggers from '../utils/NotificationTriggers';
 
 const Payment = ({ navigation, route }) => {
   const dispatch = useDispatch();
@@ -38,9 +40,29 @@ const Payment = ({ navigation, route }) => {
     dispatch(clearMessages());
   }, [dispatch]);
 
-  // Handle success message
+  // Handle success message and send order confirmation notification
   useEffect(() => {
     if (success && message) {
+      // Send comprehensive order confirmation notifications
+      const sendOrderConfirmation = async () => {
+        try {
+          // Use the production-ready notification trigger
+          await NotificationTriggers.handleOrderCreated({
+            _id: orderData?._id || `order_${Date.now()}`,
+            orderNumber: orderData?.orderNumber || `ORD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+            totalAmount: orderData?.totalAmount || 0,
+            orderItems: orderData?.orderItems || [],
+            userId: orderData?.userId || 'current_user'
+          });
+          
+          console.log('📦 Production order confirmation notifications sent');
+        } catch (error) {
+          console.error('Error sending order confirmation notification:', error);
+        }
+      };
+
+      sendOrderConfirmation();
+
       Alert.alert('Success', message, [
         {
           text: 'OK',
@@ -51,7 +73,7 @@ const Payment = ({ navigation, route }) => {
         },
       ]);
     }
-  }, [success, message]);
+  }, [success, message, orderData]);
 
   // Handle error
   useEffect(() => {

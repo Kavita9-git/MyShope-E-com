@@ -12,7 +12,7 @@ import {
   Switch,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NotificationService } from '../services/NotificationService';
+import notificationService from '../services/NotificationService';
 
 const NotificationManager = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
@@ -33,7 +33,7 @@ const NotificationManager = ({ navigation }) => {
 
   const initializeNotifications = async () => {
     try {
-      await NotificationService.initialize();
+      await notificationService.initialize();
     } catch (error) {
       console.error('Failed to initialize notifications:', error);
     }
@@ -42,21 +42,55 @@ const NotificationManager = ({ navigation }) => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const userData = await AsyncStorage.getItem('userData');
-      if (!userData) return;
       
-      const { user, token } = JSON.parse(userData);
-      const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/user/${user._id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Get server notifications if user is authenticated
+      let serverNotifications = [];
+      const userData = await AsyncStorage.getItem('userData');
+      
+      if (userData) {
+        try {
+          const { user, token } = JSON.parse(userData);
+          const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/user/${user._id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
 
-      const data = await response.json();
-      if (data.success) {
-        setNotifications(data.data.notifications || []);
+          const data = await response.json();
+          if (data.success) {
+            serverNotifications = data.data.notifications || [];
+          }
+        } catch (error) {
+          console.error('Error fetching server notifications:', error);
+        }
       }
+      
+      // Get local notifications (from push notifications received while app was running)
+      const localNotifications = await notificationService.getLocalNotifications();
+      
+      // Combine and sort notifications by timestamp (newest first)
+      // Filter out test notifications
+      const allNotifications = [...serverNotifications, ...localNotifications]
+        .filter(notification => {
+          // Exclude test notifications
+          const isTestNotification = 
+            notification.data?.test === true ||
+            notification.title?.toLowerCase().includes('test') ||
+            notification.message?.toLowerCase().includes('test') ||
+            notification.body?.toLowerCase().includes('test') ||
+            (notification.data?.orderId && notification.data.orderId.includes('test')) ||
+            (notification.data?.productId && notification.data.productId.includes('test'));
+          
+          return !isTestNotification;
+        })
+        .sort((a, b) => {
+          const timeA = new Date(a.createdAt || a.timestamp).getTime();
+          const timeB = new Date(b.createdAt || b.timestamp).getTime();
+          return timeB - timeA;
+        });
+      
+      setNotifications(allNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       Alert.alert('Error', 'Failed to fetch notifications');
@@ -117,56 +151,304 @@ const NotificationManager = ({ navigation }) => {
 
   const markAsRead = async (notificationId) => {
     try {
+      // First, try to mark server notification as read
       const userData = await AsyncStorage.getItem('userData');
-      if (!userData) return;
+      let serverMarkSuccess = false;
       
-      const { token } = JSON.parse(userData);
-      const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/read/${notificationId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      if (userData) {
+        try {
+          const { token } = JSON.parse(userData);
+          const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/read/${notificationId}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
 
-      const data = await response.json();
-      if (data.success) {
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif._id === notificationId 
-              ? { ...notif, status: 'read', readAt: new Date().toISOString() }
-              : notif
-          )
-        );
+          const data = await response.json();
+          if (data.success) {
+            serverMarkSuccess = true;
+          }
+        } catch (serverError) {
+          console.log('Could not mark server notification as read:', serverError.message);
+        }
       }
+      
+      // Also try to mark local notification as read (if it's a local notification)
+      await notificationService.markNotificationAsRead(notificationId);
+      
+      // Update local state for both server and local notifications
+      setNotifications(prev => 
+        prev.map(notif => {
+          // Handle both server notifications (with _id) and local notifications (with id)
+          const id = notif._id || notif.id;
+          return id === notificationId
+            ? { ...notif, status: 'read', read: true, readAt: new Date().toISOString() }
+            : notif;
+        })
+      );
+      
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
   };
 
   const handleNotificationPress = (notification) => {
-    if (notification.status !== 'read') {
-      markAsRead(notification._id);
+    // Check for both unread status formats (server and local notifications)
+    const isUnread = notification.status !== 'read' && !notification.read;
+    
+    if (isUnread) {
+      // Handle both server notifications (with _id) and local notifications (with id)
+      const notificationId = notification._id || notification.id;
+      markAsRead(notificationId);
     }
 
-    // Navigate based on notification type
-    if (notification.data?.orderId) {
-      navigation.navigate('OrderDetails', { orderId: notification.data.orderId });
-    } else if (notification.type === 'marketing' && notification.data?.productId) {
-      navigation.navigate('ProductDetails', { productId: notification.data.productId });
+    // Enhanced navigation based on notification type and data
+    const notificationType = notification.type || notification.data?.type;
+    const notificationData = notification.data || {};
+    
+    console.log('🔔 Notification pressed:', notificationType, notificationData);
+
+    try {
+      switch (notificationType) {
+        case 'order_confirmation':
+        case 'order_update':
+          // Navigate to order details or orders list
+          if (notificationData.orderId) {
+            navigation.navigate('OrderDetail', { orderId: notificationData.orderId });
+          } else {
+            navigation.navigate('myorders');
+          }
+          break;
+        
+        case 'cart_abandonment':
+          // Navigate to cart
+          navigation.navigate('cart');
+          break;
+        
+        case 'price_drop':
+        case 'back_in_stock':
+        case 'new_product':
+        case 'product_recommendation':
+          // Navigate to product details
+          if (notificationData.productId) {
+            navigation.navigate('productDetails', { _id: notificationData.productId });
+          } else {
+            navigation.navigate('home');
+          }
+          break;
+        
+        case 'promotion':
+        case 'marketing':
+          // Navigate to home or specific promotion
+          if (notificationData.productId) {
+            navigation.navigate('productDetails', { _id: notificationData.productId });
+          } else {
+            navigation.navigate('home');
+          }
+          break;
+        
+        case 'wishlist_update':
+          // Navigate to wishlist
+          navigation.navigate('wishlist');
+          break;
+        
+        default:
+          // For general notifications or unknown types, stay in notifications
+          console.log('📋 General notification, staying in notifications screen');
+          break;
+      }
+    } catch (error) {
+      console.error('❌ Error navigating from notification:', error);
     }
   };
 
   const testNotification = async () => {
     try {
-      await NotificationService.sendLocalNotification(
-        'Test Notification',
-        'This is a test notification to verify the system works!',
-        { test: true }
+      // Show options for different test notifications
+      Alert.alert(
+        'Test Notifications',
+        'Choose a notification type to test:',
+        [
+          { text: 'Order Confirmation', onPress: () => testOrderNotification() },
+          { text: 'Cart Abandonment', onPress: () => testCartNotification() },
+          { text: 'Price Drop', onPress: () => testPriceDropNotification() },
+          { text: 'Back in Stock', onPress: () => testStockNotification() },
+          { text: 'General Test', onPress: () => testGeneralNotification() },
+          { text: 'Clear All Local', onPress: () => clearAllLocalNotifications(), style: 'destructive' },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+        { cancelable: true }
       );
-      Alert.alert('Test Sent', 'Check your notification panel');
     } catch (error) {
-      Alert.alert('Error', 'Failed to send test notification');
+      Alert.alert('Error', 'Failed to show test options');
+    }
+  };
+
+  const clearAllLocalNotifications = async () => {
+    try {
+      await notificationService.clearAllNotifications();
+      Alert.alert('Success', 'All local notifications cleared!');
+      // Refresh notifications list
+      fetchNotifications();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to clear local notifications');
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      if (notifications.length === 0) {
+        Alert.alert('Info', 'No notifications to clear');
+        return;
+      }
+
+      Alert.alert(
+        'Clear All Notifications',
+        'Are you sure you want to clear all notifications? This action cannot be undone.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Clear All',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // Clear local notifications
+                await notificationService.clearAllNotifications();
+                
+                // Mark all server notifications as read (if any)
+                const userData = await AsyncStorage.getItem('userData');
+                if (userData) {
+                  const { user, token } = JSON.parse(userData);
+                  const serverNotifications = notifications.filter(n => n._id); // Server notifications have _id
+                  
+                  if (serverNotifications.length > 0) {
+                    try {
+                      // Mark all server notifications as read
+                      await Promise.all(
+                        serverNotifications.map(notification => 
+                          fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/read/${notification._id}`, {
+                            method: 'PUT',
+                            headers: {
+                              'Authorization': `Bearer ${token}`,
+                              'Content-Type': 'application/json',
+                            },
+                          })
+                        )
+                      );
+                    } catch (serverError) {
+                      console.log('Could not mark all server notifications as read:', serverError.message);
+                    }
+                  }
+                }
+                
+                // Refresh notifications list
+                fetchNotifications();
+                Alert.alert('Success', 'All notifications cleared!');
+              } catch (error) {
+                console.error('Error clearing all notifications:', error);
+                Alert.alert('Error', 'Failed to clear all notifications');
+              }
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to show clear confirmation');
+    }
+  };
+
+  const testOrderNotification = async () => {
+    try {
+      await notificationService.sendLocalNotification(
+        'Order Confirmed! 🎉',
+        'Your order #12345 for $89.99 has been placed successfully. Tap to view details.',
+        { 
+          type: 'order_confirmation',
+          orderId: 'test-order-123',
+          orderTotal: 89.99,
+          itemCount: 3
+        }
+      );
+      Alert.alert('Test Sent', 'Order confirmation notification sent! Tap it to test navigation.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send order test notification');
+    }
+  };
+
+  const testCartNotification = async () => {
+    try {
+      await notificationService.sendLocalNotification(
+        'Don\'t forget your cart! 🛒',
+        'You have 2 items waiting: iPhone Case, Wireless Charger. Complete your purchase now!',
+        { 
+          type: 'cart_abandonment',
+          cartItems: [{ name: 'iPhone Case' }, { name: 'Wireless Charger' }],
+          totalValue: 45.98
+        }
+      );
+      Alert.alert('Test Sent', 'Cart abandonment notification sent! Tap it to test navigation.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send cart test notification');
+    }
+  };
+
+  const testPriceDropNotification = async () => {
+    try {
+      await notificationService.sendLocalNotification(
+        'Price Drop Alert! 📉',
+        'Wireless Headphones is now $79.99 (was $99.99). Save 20% now!',
+        { 
+          type: 'price_drop',
+          productId: 'test-product-456',
+          productName: 'Wireless Headphones',
+          oldPrice: 99.99,
+          newPrice: 79.99,
+          discountPercent: 20
+        }
+      );
+      Alert.alert('Test Sent', 'Price drop notification sent! Tap it to test navigation.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send price drop test notification');
+    }
+  };
+
+  const testStockNotification = async () => {
+    try {
+      await notificationService.sendLocalNotification(
+        'Back in Stock! 🎉',
+        'Gaming Mouse is now available. Get it before it sells out again!',
+        { 
+          type: 'back_in_stock',
+          productId: 'test-product-789',
+          productName: 'Gaming Mouse',
+          currentStock: 15
+        }
+      );
+      Alert.alert('Test Sent', 'Back in stock notification sent! Tap it to test navigation.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send stock test notification');
+    }
+  };
+
+  const testGeneralNotification = async () => {
+    try {
+      await notificationService.sendLocalNotification(
+        'Test Notification 🔔',
+        'This is a general test notification to verify the system works!',
+        { 
+          type: 'general',
+          test: true
+        }
+      );
+      Alert.alert('Test Sent', 'General test notification sent!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send general test notification');
     }
   };
 
@@ -198,25 +480,30 @@ const NotificationManager = ({ navigation }) => {
     }
   };
 
-  const renderNotification = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        styles.notificationItem, 
-        item.status === 'unread' && styles.unreadNotification
-      ]}
-      onPress={() => handleNotificationPress(item)}
-    >
-      <View style={styles.notificationHeader}>
-        <Text style={styles.notificationIcon}>{getNotificationIcon(item.type)}</Text>
-        <View style={styles.notificationContent}>
-          <Text style={styles.notificationTitle}>{item.title}</Text>
-          <Text style={styles.notificationMessage}>{item.message}</Text>
-          <Text style={styles.notificationTime}>{formatTime(item.createdAt)}</Text>
+  const renderNotification = ({ item }) => {
+    // Check for both unread status formats (server and local notifications)
+    const isUnread = item.status !== 'read' && !item.read;
+    
+    return (
+      <TouchableOpacity 
+        style={[
+          styles.notificationItem, 
+          isUnread && styles.unreadNotification
+        ]}
+        onPress={() => handleNotificationPress(item)}
+      >
+        <View style={styles.notificationHeader}>
+          <Text style={styles.notificationIcon}>{getNotificationIcon(item.type)}</Text>
+          <View style={styles.notificationContent}>
+            <Text style={styles.notificationTitle}>{item.title}</Text>
+            <Text style={styles.notificationMessage}>{item.message || item.body}</Text>
+            <Text style={styles.notificationTime}>{formatTime(item.createdAt || item.timestamp)}</Text>
+          </View>
+          {isUnread && <View style={styles.unreadDot} />}
         </View>
-        {item.status === 'unread' && <View style={styles.unreadDot} />}
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderPreferencesModal = () => (
     <Modal
@@ -302,6 +589,9 @@ const NotificationManager = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={clearAllNotifications} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>Clear All</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={testNotification} style={styles.testButton}>
             <Text style={styles.testButtonText}>Test</Text>
           </TouchableOpacity>
@@ -314,10 +604,10 @@ const NotificationManager = ({ navigation }) => {
         </View>
       </View>
 
-      <FlatList
+        <FlatList
         data={notifications}
         renderItem={renderNotification}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item) => item._id || item.id || String(item.timestamp)}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -362,6 +652,18 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  clearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#FF3B30',
+    borderRadius: 16,
+    marginRight: 10,
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   testButton: {
     paddingHorizontal: 12,

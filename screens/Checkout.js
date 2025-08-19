@@ -24,12 +24,16 @@ import PaymentSelector from '../components/Checkout/PaymentSelector';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import notificationService from '../services/NotificationService';
+import useToast from '../hooks/useToast';
+import Toast from '../components/Message/Toast';
 
 const Checkout = ({ navigation }) => {
   const dispatch = useDispatch();
   const { items = [] } = useSelector(state => state.cart);
   const { loading, success } = useSelector(state => state.order);
   const { user } = useSelector(state => state.user);
+  const { toast, showSuccess, showError, hideToast } = useToast();
 
   // State for form
   const [name, setName] = useState('');
@@ -91,11 +95,26 @@ const Checkout = ({ navigation }) => {
   // Handle success
   useEffect(() => {
     if (success) {
+      handleOrderSuccess();
+    }
+  }, [success]);
+
+  // Handle successful order placement
+  const handleOrderSuccess = async () => {
+    try {
       setShowNotification(true);
 
       // Save the current shipping details as the last used address
-      saveCurrentAddressAsLastUsed();
+      await saveCurrentAddressAsLastUsed();
+      
+      // Send push notification (local notification)
+      await sendOrderSuccessNotification();
+      
+      // Show success toast
+      showSuccess('🎉 Order placed successfully! You will receive updates about your order.');
+      
       dispatch(clearSuccess());
+      
       // Animate notification entrance
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -103,7 +122,7 @@ const Checkout = ({ navigation }) => {
         useNativeDriver: true,
       }).start();
 
-      // Auto-hide notification after 3 seconds
+      // Auto-hide notification after 4 seconds (increased time)
       setTimeout(() => {
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -116,9 +135,41 @@ const Checkout = ({ navigation }) => {
           // Navigate back - this avoids the cross-stack navigation issue
           navigation.goBack();
         });
-      }, 3000);
+      }, 4000);
+    } catch (error) {
+      console.error('Error handling order success:', error);
+      // Still show success UI even if notifications fail
+      setShowNotification(true);
+      showSuccess('Order placed successfully!');
+      dispatch(clearSuccess());
     }
-  }, [success]);
+  };
+
+  // Send order success notification
+  const sendOrderSuccessNotification = async () => {
+    try {
+      const orderTotal = `$${total.toFixed(2)}`;
+      const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+      
+      // Send local notification
+      await notificationService.sendLocalNotification(
+        '🛍️ Order Placed Successfully!',
+        `Your order of ${itemCount} item(s) worth ${orderTotal} has been placed. ${paymentMethod === 'COD' ? 'You can pay when the order is delivered.' : 'Payment processed successfully.'}`,
+        {
+          type: 'order_update',
+          orderId: Date.now().toString(), // You might want to use the actual order ID from the backend response
+          totalAmount: total,
+          itemCount,
+          paymentMethod,
+          timestamp: Date.now()
+        }
+      );
+
+      console.log('✅ Order success notification sent');
+    } catch (error) {
+      console.error('❌ Failed to send order success notification:', error);
+    }
+  };
 
   // Save the current address as the last used one
   const saveCurrentAddressAsLastUsed = async () => {
@@ -350,6 +401,15 @@ const Checkout = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+      
+      {/* Toast for success/error messages */}
+      {toast.visible && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={hideToast}
+        />
+      )}
     </Layout>
   );
 };

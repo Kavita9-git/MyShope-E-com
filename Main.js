@@ -36,14 +36,20 @@ import WishList from './screens/WishList';
 import SearchResults from './screens/SearchResults';
 import { useDispatch, useSelector } from 'react-redux';
 import { getUserData } from './redux/features/auth/userActions';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, AppState } from 'react-native';
 import axios from 'axios';
 import CategoryProducts from './screens/CategoryProducts';
 import ManageUsers from './screens/Admin/ManageUsers';
+import ManageNotifications from './screens/Admin/ManageNotifications';
 import notificationService from './services/NotificationService';
+import { NavigationActions, StackActions } from '@react-navigation/native';
+import AutomatedNotificationSystem from './utils/AutomatedNotificationSystem';
 
 //routes
 const Stack = createNativeStackNavigator();
+
+// Navigation reference for deep linking
+let navigationRef = null;
 
 // Auth screens stack - screens accessible without login
 const AuthStack = () => (
@@ -90,6 +96,7 @@ const AppStack = () => (
     <Stack.Screen name="deleteimageproduct" component={DeleteImageProduct} />
     <Stack.Screen name="updateimageproducts" component={UpdateImageProducts} />
     <Stack.Screen name="manageusers" component={ManageUsers} />
+    <Stack.Screen name="managenotifications" component={ManageNotifications} />
   </Stack.Navigator>
 );
 
@@ -99,20 +106,115 @@ export default function Main() {
   const dispatch = useDispatch();
   const { isAuth } = useSelector(state => state.user);
 
-  // Initialize notifications
+  // Initialize notifications with navigation handler
   useEffect(() => {
     const initializeNotifications = async () => {
       console.log('🔔 Initializing notifications...');
       try {
         await notificationService.initialize();
-        console.log('✅ NotificationService initialized successfully');
+        
+        // Set up navigation handler for notifications
+        notificationService.setNavigationHandler(handleNotificationNavigation);
+        
+        // 🤖 Initialize automated notification system
+        console.log('🚀 Starting automated notification system...');
+        await AutomatedNotificationSystem.initialize();
+        
+        console.log('✅ All notification systems initialized successfully');
       } catch (error) {
-        console.log('❌ NotificationService initialization failed:', error);
+        console.log('❌ Notification system initialization failed:', error);
       }
     };
     
     initializeNotifications();
+    
+    // Cleanup on unmount
+    return () => {
+      AutomatedNotificationSystem.cleanup();
+    };
   }, []);
+
+  // Handle app state changes to check for pending notifications
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active') {
+        // App became active, check for pending navigation
+        setTimeout(() => {
+          notificationService.executePendingNavigation();
+        }, 1000); // Small delay to ensure navigation is ready
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      if (subscription?.remove) {
+        subscription.remove();
+      }
+    };
+  }, []);
+
+  // Navigation handler for notifications
+  const handleNotificationNavigation = ({ type, data }) => {
+    console.log('🧭 Handling notification navigation:', type, data);
+    
+    if (!navigationRef?.current) {
+      console.warn('Navigation ref not ready, storing for later');
+      return;
+    }
+
+    try {
+      switch (type) {
+        case 'order_confirmation':
+        case 'order_update':
+          // Navigate to MyOrders screen
+          if (data.orderId) {
+            navigationRef.current.navigate('OrderDetail', { orderId: data.orderId });
+          } else {
+            navigationRef.current.navigate('myorders');
+          }
+          break;
+        
+        case 'cart_abandonment':
+          // Navigate to Cart screen
+          navigationRef.current.navigate('cart');
+          break;
+        
+        case 'price_drop':
+        case 'back_in_stock':
+        case 'new_product':
+        case 'product_recommendation':
+          // Navigate to Product Details
+          if (data.productId) {
+            navigationRef.current.navigate('productDetails', { _id: data.productId });
+          } else {
+            navigationRef.current.navigate('home');
+          }
+          break;
+        
+        case 'promotion':
+        case 'marketing':
+          // Navigate to Home screen for promotions
+          navigationRef.current.navigate('home');
+          break;
+        
+        default:
+          // Navigate to notifications screen
+          navigationRef.current.navigate('notifications');
+          break;
+      }
+      
+      console.log('✅ Navigation completed for:', type);
+    } catch (error) {
+      console.error('❌ Error in notification navigation:', error);
+      // Fallback to notifications screen
+      try {
+        navigationRef.current.navigate('notifications');
+      } catch (fallbackError) {
+        console.error('❌ Fallback navigation also failed:', fallbackError);
+      }
+    }
+  };
 
   // Check authentication status and set up Bearer token on app load
   useEffect(() => {
@@ -177,7 +279,15 @@ export default function Main() {
   // If forceAuthStack is true, show the AuthStack regardless of isAuth state
   // This helps handle the login navigation issue
   return (
-    <NavigationContainer>
+    <NavigationContainer 
+      ref={(ref) => {
+        navigationRef = ref;
+        // Check for pending notifications after navigation is ready
+        setTimeout(() => {
+          notificationService.executePendingNavigation();
+        }, 500);
+      }}
+    >
       {isAuth && !forceAuthStack ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );

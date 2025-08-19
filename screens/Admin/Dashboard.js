@@ -156,6 +156,27 @@ const Dashboard = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.btn}
+            onPress={() => navigation.navigate("managenotifications")}
+          >
+            <LinearGradient
+              colors={["#667eea", "#764ba2"]}
+              style={styles.iconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <MaterialIcons name="notifications" size={22} color="#fff" />
+            </LinearGradient>
+            <View style={styles.btnTextContainer}>
+              <Text style={styles.btnText}>Manage Notifications</Text>
+              <Text style={styles.btnSubText}>
+                Send notifications and manage settings
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.btn}
             onPress={() => navigation.navigate("about")}
           >
             <LinearGradient

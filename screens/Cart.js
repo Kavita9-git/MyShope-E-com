@@ -10,6 +10,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Feather from 'react-native-vector-icons/Feather';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import notificationService from '../services/NotificationService';
+import { AppState } from 'react-native';
+import NotificationTriggers from '../utils/NotificationTriggers';
 
 const Cart = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -17,11 +20,43 @@ const Cart = ({ navigation }) => {
   const { products } = useSelector(state => state.product);
   const [outOfStockItems, setOutOfStockItems] = useState([]);
   const [validCartItems, setValidCartItems] = useState([]);
+  const [cartAbandonmentTimer, setCartAbandonmentTimer] = useState(null);
 
   useEffect(() => {
     dispatch(getCart());
     dispatch(getAllProducts());
   }, []);
+
+  // Production-ready cart abandonment tracking
+  useEffect(() => {
+    let appStateSubscription = null;
+
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        // User is leaving the app, start comprehensive abandonment tracking
+        if (validCartItems && validCartItems.length > 0) {
+          console.log('🛒 Setting up production cart abandonment tracking');
+          NotificationTriggers.setupCartAbandonmentTracking(validCartItems, 'current_user');
+        }
+      } else if (nextAppState === 'active') {
+        // User is back in the app, cleanup any pending timers
+        console.log('🛒 User returned - cleaning up abandonment tracking');
+        NotificationTriggers.cleanup();
+      }
+    };
+
+    // Set up app state listener
+    appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Cleanup function
+    return () => {
+      if (appStateSubscription) {
+        appStateSubscription.remove();
+      }
+      // Cleanup when component unmounts
+      NotificationTriggers.cleanup();
+    };
+  }, [validCartItems]);
 
   useEffect(() => {
     dispatch(clearError());
@@ -30,13 +65,39 @@ const Cart = ({ navigation }) => {
 
   // Check stock availability for cart items
   useEffect(() => {
+    console.log('=== CART STOCK CHECK DEBUG ===');
+    console.log('Items in cart:', items?.length || 0);
+    console.log('Products available:', products?.length || 0);
+    
+    if (items && items.length > 0) {
+      console.log('Sample cart item:', JSON.stringify(items[0], null, 2));
+    }
+    
+    if (products && products.length > 0) {
+      console.log('Sample product:', JSON.stringify(products[0], null, 2));
+    }
+    
     if (items && items.length > 0 && products && products.length > 0) {
       const outOfStock = [];
       const inStock = [];
       
       items.forEach(cartItem => {
-        // Find the product in the products list
-        const product = products.find(p => p._id === cartItem.productId?._id);
+        console.log('Processing cart item:', cartItem.name);
+        console.log('Cart item productId:', cartItem.productId);
+        
+        // Try different ways to find the product
+        let product = products.find(p => p._id === cartItem.productId?._id);
+        if (!product) {
+          product = products.find(p => p._id === cartItem.productId);
+        }
+        if (!product) {
+          product = products.find(p => p._id.toString() === cartItem.productId?._id?.toString());
+        }
+        if (!product) {
+          product = products.find(p => p._id.toString() === cartItem.productId?.toString());
+        }
+        
+        console.log('Found product:', product ? product.name : 'NOT FOUND');
         
         if (product) {
           let isAvailable = false;
@@ -56,7 +117,8 @@ const Cart = ({ navigation }) => {
             }
           } else {
             // For non-clothing products, check general stock
-            availableStock = product.stock || 0;
+            // Handle both 'stock' (from server) and 'quantity' (from fallback data)
+            availableStock = product.stock || product.quantity || 0;
             isAvailable = availableStock > 0;
           }
           
@@ -169,19 +231,28 @@ const Cart = ({ navigation }) => {
 
             <Text style={styles.sectionTitle}>Cart Items</Text>
 
-            {cartItems.map(item => (
-              <View key={item._id}>
-                <CartItem item={item} />
-                {item.maxStock && item.quantity > item.maxStock && (
-                  <View style={styles.stockWarning}>
-                    <Feather name="alert-circle" size={14} color="#F59E0B" />
-                    <Text style={styles.stockWarningText}>
-                      Only {item.maxStock} available in stock
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ))}
+            {cartItems.map(item => {
+              // Find the corresponding product from the products array to get full product data including images
+              const product = products.find(p => p._id === item.productId?._id || p._id === item.productId);
+              const enrichedItem = {
+                ...item,
+                productId: product || item.productId, // Use full product data if available
+              };
+              
+              return (
+                <View key={item._id}>
+                  <CartItem item={enrichedItem} />
+                  {item.maxStock && item.quantity > item.maxStock && (
+                    <View style={styles.stockWarning}>
+                      <Feather name="alert-circle" size={14} color="#F59E0B" />
+                      <Text style={styles.stockWarningText}>
+                        Only {item.maxStock} available in stock
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
 
             <Text style={styles.sectionTitle}>Order Summary</Text>
 

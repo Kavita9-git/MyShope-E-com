@@ -15,18 +15,91 @@ import Feather from "react-native-vector-icons/Feather";
 import { useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useState, useEffect } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import notificationService from "../../services/NotificationService";
 
 const Header = () => {
   const navigation = useNavigation();
   const { items } = useSelector((state) => state.cart);
   const { wishlistItems } = useSelector((state) => state.wishlist);
   const { user } = useSelector((state) => state.user);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   //state
   const userImage = user?.profilePic?.url;
   // console.log("userImage :", userImage);
   const cartItemsCount = items?.length || 0;
   const wishlistItemsCount = wishlistItems?.length || 0;
+
+  // Get unread notifications count (both server and local)
+  useEffect(() => {
+    const getUnreadCount = async () => {
+      try {
+        let totalUnread = 0;
+        
+        // Get local notifications count
+        const localCount = await notificationService.getUnreadCount();
+        console.log('📱 Local unread notifications count:', localCount);
+        totalUnread += localCount;
+        
+        // Get server notifications count if user is authenticated
+        try {
+          const userData = await AsyncStorage.getItem('userData');
+          if (userData) {
+            const { user, token } = JSON.parse(userData);
+            const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/user/${user._id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success && data.data.notifications) {
+                console.log('🔔 Total server notifications:', data.data.notifications.length);
+                
+                // Filter out test notifications and count unread ones
+                const unreadServerNotifications = data.data.notifications.filter(notification => {
+                  const isTestNotification = 
+                    notification.data?.test === true ||
+                    notification.title?.toLowerCase().includes('test') ||
+                    notification.message?.toLowerCase().includes('test') ||
+                    notification.body?.toLowerCase().includes('test') ||
+                    (notification.data?.orderId && notification.data.orderId.includes('test')) ||
+                    (notification.data?.productId && notification.data.productId.includes('test'));
+                  
+                  const isUnread = notification.status === 'unread';
+                  console.log(`📋 Notification "${notification.title}" - Status: ${notification.status}, IsTest: ${isTestNotification}, IsUnread: ${isUnread}`);
+                  
+                  return !isTestNotification && isUnread;
+                });
+                
+                console.log('✅ Server unread notifications count:', unreadServerNotifications.length);
+                totalUnread += unreadServerNotifications.length;
+              }
+            }
+          }
+        } catch (serverError) {
+          console.log('Could not fetch server notifications for count:', serverError.message);
+        }
+        
+        console.log('🔢 Total unread notifications:', totalUnread);
+        setUnreadNotifications(totalUnread);
+      } catch (error) {
+        console.error('Error getting unread notifications count:', error);
+        setUnreadNotifications(0);
+      }
+    };
+
+    getUnreadCount();
+    
+    // Update count every 30 seconds
+    const interval = setInterval(getUnreadCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
   return (
     <>
       <StatusBar backgroundColor="#1e3c72" barStyle="light-content" />
@@ -91,6 +164,26 @@ const Header = () => {
                 )}
               </View>
               <Text style={styles.navText}>Wishlist</Text>
+            </TouchableOpacity>
+
+            {/* Notifications */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate("notifications")}
+              style={styles.navButtonContainer}
+            >
+              <View style={styles.iconContainer}>
+                <View
+                  style={[styles.navIconCircle, { backgroundColor: "#7c3aed" }]}
+                >
+                  <AntDesign name="bells" size={18} color="#fff" />
+                </View>
+                {unreadNotifications > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{unreadNotifications}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.navText}>Notifications</Text>
             </TouchableOpacity>
 
             {/* Cart */}
