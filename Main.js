@@ -41,6 +41,14 @@ import axios from 'axios';
 import CategoryProducts from './screens/CategoryProducts';
 import ManageUsers from './screens/Admin/ManageUsers';
 import ManageNotifications from './screens/Admin/ManageNotifications';
+import SendPushNotification from './screens/Admin/Notifications/SendPushNotification';
+import NotificationHistory from './screens/Admin/Notifications/NotificationHistory';
+import BulkNotifications from './screens/Admin/Notifications/BulkNotifications';
+import NotificationTemplates from './screens/Admin/Notifications/NotificationTemplates';
+import ScheduledNotifications from './screens/Admin/Notifications/ScheduledNotifications';
+import NotificationAnalytics from './screens/Admin/Notifications/NotificationAnalytics';
+import UserSegments from './screens/Admin/Notifications/UserSegments';
+import AutomationSettings from './screens/Admin/Notifications/AutomationSettings';
 import notificationService from './services/NotificationService';
 import { NavigationActions, StackActions } from '@react-navigation/native';
 import AutomatedNotificationSystem from './utils/AutomatedNotificationSystem';
@@ -97,6 +105,16 @@ const AppStack = () => (
     <Stack.Screen name="updateimageproducts" component={UpdateImageProducts} />
     <Stack.Screen name="manageusers" component={ManageUsers} />
     <Stack.Screen name="managenotifications" component={ManageNotifications} />
+    
+    {/* Notification Management Screens */}
+    <Stack.Screen name="sendpushnotification" component={SendPushNotification} />
+    <Stack.Screen name="notificationhistory" component={NotificationHistory} />
+    <Stack.Screen name="bulknotifications" component={BulkNotifications} />
+    <Stack.Screen name="notificationtemplates" component={NotificationTemplates} />
+    <Stack.Screen name="schedulednotifications" component={ScheduledNotifications} />
+    <Stack.Screen name="notificationanalytics" component={NotificationAnalytics} />
+    <Stack.Screen name="usersegments" component={UserSegments} />
+    <Stack.Screen name="automationsettings" component={AutomationSettings} />
   </Stack.Navigator>
 );
 

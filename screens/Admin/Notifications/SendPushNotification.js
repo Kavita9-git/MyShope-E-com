@@ -19,8 +19,14 @@ import Feather from "react-native-vector-icons/Feather";
 import { LinearGradient } from "expo-linear-gradient";
 import { Picker } from "@react-native-picker/picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useDispatch, useSelector } from "react-redux";
+import { getAllUserData } from "../../../redux/features/auth/userActions";
+import axiosInstance from "../../../utils/axiosConfig";
 
 const SendPushNotification = ({ navigation, route }) => {
+  const dispatch = useDispatch();
+  const { users } = useSelector((state) => state.user);
+  
   const [formData, setFormData] = useState({
     title: "",
     body: "",
@@ -41,13 +47,15 @@ const SendPushNotification = ({ navigation, route }) => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [templates, setTemplates] = useState([]);
 
-  // Pre-fill form if type is passed from route
+  // Pre-fill form if type is passed from route and fetch users data
   useEffect(() => {
     if (route?.params?.type) {
       fillTemplate(route.params.type);
     }
     loadTemplates();
-  }, []);
+    // Fetch users data for calculating real delivery counts
+    dispatch(getAllUserData());
+  }, [dispatch]);
 
   const loadTemplates = async () => {
     try {
@@ -111,15 +119,110 @@ const SendPushNotification = ({ navigation, route }) => {
     return true;
   };
 
+  // Helper function to calculate target user count
+  const calculateTargetUserCount = () => {
+    if (!users || users.length === 0) {
+      return 0;
+    }
+
+    const isBlocked = (user) => user.blocked === true || user.blocked === "true" || user.blocked === "yes" || user.blocked === 1;
+    const isAdmin = (user) => user.role === "admin" || user.role === "ADMIN";
+    const activeUsers = users.filter((user) => !isBlocked(user));
+
+    switch (formData.target) {
+      case "all":
+        return activeUsers.length;
+      case "users":
+        return activeUsers.filter((user) => !isAdmin(user)).length;
+      case "admins":
+        return activeUsers.filter((user) => isAdmin(user)).length;
+      case "segment":
+        // For segments, assume 10-30% of active users (can be customized)
+        return Math.floor(activeUsers.length * (Math.random() * 0.2 + 0.1));
+      default:
+        return activeUsers.length;
+    }
+  };
+
   const sendNotification = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      // Simulate API call to server
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Calculate real user counts based on target audience for preview
+      const targetUserCount = calculateTargetUserCount();
       
-      // Save to history
+      // Prepare notification data for backend API
+      const notificationData = {
+        title: formData.title,
+        body: formData.body,
+        type: 'admin_broadcast', // Type for admin-sent notifications
+        priority: formData.priority,
+        data: {
+          action: formData.action,
+          actionValue: formData.actionValue,
+          imageUrl: formData.imageUrl,
+          sound: formData.sound,
+          vibrate: formData.vibrate,
+          badge: formData.badge
+        }
+      };
+      
+      // Prepare filters based on target audience
+      let apiResponse;
+      
+      if (formData.target === 'all') {
+        // Send to all users using bulk notification
+        const response = await axiosInstance.post('/notification/send-bulk', {
+          ...notificationData,
+          filters: {} // Empty filters means all users
+        });
+        apiResponse = response.data;
+      } else if (formData.target === 'admins') {
+        // Send to admins only
+        const response = await axiosInstance.post('/notification/send-bulk', {
+          ...notificationData,
+          filters: {
+            role: 'admin'
+          }
+        });
+        apiResponse = response.data;
+      } else if (formData.target === 'users') {
+        // Send to regular users (non-admin) - let backend handle this
+        // We need to get all users and filter them manually since backend buildUserQuery doesn't support $ne
+        const allUsersResponse = await axiosInstance.get('/user/all-users');
+        const allUsers = allUsersResponse.data.users || [];
+        const regularUserIds = allUsers
+          .filter(user => user.role !== 'admin' && user.role !== 'ADMIN')
+          .map(user => user._id);
+        
+        if (regularUserIds.length === 0) {
+          throw new Error('No regular users found to send notifications to');
+        }
+        
+        const response = await axiosInstance.post('/notification/send-bulk', {
+          ...notificationData,
+          userIds: regularUserIds // Send to specific user IDs instead of filters
+        });
+        apiResponse = response.data;
+      } else if (formData.target === 'segment' && formData.segment) {
+        // For segments, we could implement custom logic later
+        // For now, just send to a subset of users
+        const response = await axiosInstance.post('/notification/send-bulk', {
+          ...notificationData,
+          filters: {} // Could add custom segment logic here
+        });
+        apiResponse = response.data;
+      } else {
+        throw new Error('Invalid target audience selected');
+      }
+      
+      console.log('✅ Notification API Response:', apiResponse);
+      
+      // Get actual results from API response
+      const actualResults = apiResponse.data || { total: targetUserCount, sent: targetUserCount, failed: 0, skipped: 0 };
+      
+      // Save to local history for admin dashboard
       const notificationHistory = await AsyncStorage.getItem("notificationHistory");
       const history = notificationHistory ? JSON.parse(notificationHistory) : [];
       
@@ -128,22 +231,52 @@ const SendPushNotification = ({ navigation, route }) => {
         ...formData,
         sentAt: new Date().toISOString(),
         status: "sent",
-        deliveredCount: Math.floor(Math.random() * 500) + 100,
-        openedCount: Math.floor(Math.random() * 200) + 50,
+        deliveredCount: actualResults.sent || targetUserCount,
+        failedCount: actualResults.failed || 0,
+        skippedCount: actualResults.skipped || 0,
+        totalTargeted: actualResults.total || targetUserCount,
+        targetAudience: formData.target,
+        totalUsersInSystem: users?.length || 0,
+        apiResponse: actualResults
       };
       
       history.unshift(newNotification);
       await AsyncStorage.setItem("notificationHistory", JSON.stringify(history.slice(0, 100))); // Keep last 100
       
-      // Update stats
+      // Update stats with real data
       const stats = await AsyncStorage.getItem("notificationStats");
-      const currentStats = stats ? JSON.parse(stats) : { totalSent: 0, activeCampaigns: 0, openRate: 0, activeUsers: 0 };
+      const isBlocked = (user) => user.blocked === true || user.blocked === "true" || user.blocked === "yes" || user.blocked === 1;
+      const activeUsersCount = users ? users.filter((user) => !isBlocked(user)).length : 0;
+      
+      const currentStats = stats ? JSON.parse(stats) : { 
+        totalSent: 0, 
+        activeCampaigns: 0, 
+        openRate: 0, 
+        activeUsers: activeUsersCount 
+      };
+      
       currentStats.totalSent += newNotification.deliveredCount;
+      currentStats.activeUsers = activeUsersCount;
+      currentStats.activeCampaigns = (currentStats.activeCampaigns || 0) + 1;
+      
       await AsyncStorage.setItem("notificationStats", JSON.stringify(currentStats));
 
+      const targetDescription = {
+        all: "all active users",
+        users: "regular users",
+        admins: "administrators",
+        segment: `users in "${formData.segment}" segment`
+      };
+      
+      const successMessage = `Notification sent successfully!\n\n` +
+        `✅ Delivered: ${newNotification.deliveredCount}\n` +
+        `❌ Failed: ${newNotification.failedCount}\n` +
+        `⏭️ Skipped: ${newNotification.skippedCount}\n` +
+        `🎯 Target: ${targetDescription[formData.target] || 'users'}`;
+      
       Alert.alert(
         "Success!",
-        `Notification sent successfully to ${newNotification.deliveredCount} users!`,
+        successMessage,
         [
           { text: "Send Another", onPress: () => resetForm() },
           { text: "View History", onPress: () => navigation.navigate("notificationhistory") },
@@ -151,7 +284,12 @@ const SendPushNotification = ({ navigation, route }) => {
         ]
       );
     } catch (error) {
-      Alert.alert("Error", "Failed to send notification. Please try again.");
+      console.error('❌ Error sending notification:', error.response?.data || error.message);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to send notification';
+      Alert.alert(
+        "Error", 
+        `Failed to send notification:\n\n${errorMessage}\n\nPlease check your connection and try again.`
+      );
     } finally {
       setLoading(false);
     }

@@ -20,7 +20,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 const { width } = Dimensions.get("window");
 
-const SearchFilter = ({ onSearch, onFilter, initialSearchText = "" }) => {
+const SearchFilter = ({ onSearch, onFilter, initialSearchText = "", initialCategoryFilter = null }) => {
   const dispatch = useDispatch();
   const { categories } = useSelector((state) => state.category);
   const { products } = useSelector((state) => state.product);
@@ -56,6 +56,41 @@ const SearchFilter = ({ onSearch, onFilter, initialSearchText = "" }) => {
       }
     }
   }, [initialSearchText]);
+
+  // Set initial category filter if provided
+  useEffect(() => {
+    if (initialCategoryFilter && categories && categories.length > 0) {
+      const categoryObj = categories.find(cat => {
+        const catName = cat.category || cat.name;
+        return catName?.toLowerCase() === initialCategoryFilter.toLowerCase();
+      });
+      
+      if (categoryObj && !selectedCategories.includes(categoryObj._id)) {
+        setSelectedCategories([categoryObj._id]);
+        
+        // Use a very high price range to show all products initially
+        const fullPriceRange = products && products.length > 0 
+          ? [Math.floor(Math.min(...products.map(p => p.price))), Math.ceil(Math.max(...products.map(p => p.price)))]
+          : [0, 50000];
+        
+        // Also apply the filter immediately with full price range
+        const initialFilter = {
+          searchText: initialSearchText,
+          priceRange: fullPriceRange,
+          selectedCategories: [categoryObj._id],
+          sortOption,
+          ratings,
+        };
+        
+        // Update local price range state to match
+        setPriceRange(fullPriceRange);
+        
+        if (onFilter) {
+          onFilter(initialFilter);
+        }
+      }
+    }
+  }, [initialCategoryFilter, categories, products]);
 
   // Handle search input change
   const handleSearchChange = (text) => {
@@ -181,8 +216,10 @@ const SearchFilter = ({ onSearch, onFilter, initialSearchText = "" }) => {
                 </View>
                 <Slider
                   style={styles.slider}
-                  minimumValue={0}
-                  maximumValue={2000}
+                  minimumValue={priceRange[0]}
+                  maximumValue={products && products.length > 0 
+                    ? Math.ceil(Math.max(...products.map(p => p.price))) 
+                    : 50000}
                   value={priceRange[1]}
                   minimumTrackTintColor="#1e3c72"
                   maximumTrackTintColor="#d3d3d3"

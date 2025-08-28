@@ -2,6 +2,7 @@ import { server } from '../../store';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '../../../utils/axiosConfig';
+import { registerPushTokenAfterLogin } from '../../../utils/pushTokenRegistration';
 
 //FUNCTION LOGIN
 
@@ -51,6 +52,19 @@ export const login = (email, password) => async dispatch => {
     // Make sure we clear the showLogin flag if it somehow persists
     console.log('[userActions] Ensuring showLogin flag is cleared');
     await AsyncStorage.removeItem('@showLogin');
+
+    // Register push token with backend after successful login
+    console.log('[userActions] Registering push token after login');
+    try {
+      // We need to get user data first to get the user ID
+      const profileResponse = await axiosInstance.get('/user/profile');
+      if (profileResponse.data.success && profileResponse.data.user._id) {
+        await registerPushTokenAfterLogin(profileResponse.data.user._id);
+        console.log('[userActions] Push token registration completed after login');
+      }
+    } catch (pushTokenError) {
+      console.log('[userActions] Push token registration failed (non-critical):', pushTokenError.message);
+    }
 
     return data;
   } catch (error) {

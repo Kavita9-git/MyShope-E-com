@@ -3,7 +3,8 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout/Layout';
 import Categories from '../components/Layout/category/Categories';
 import Banner from '../components/Banner/Banner';
-import Products from '../components/Products/Products';
+import ProductsCard from '../components/Products/ProductsCard';
+import { ProductsData } from '../data/ProductsData';
 import Header from '../components/Layout/Header';
 import { useDispatch, useSelector } from 'react-redux';
 import { getUserData } from '../redux/features/auth/userActions';
@@ -23,11 +24,12 @@ const Home = () => {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.user);
   const { item } = useSelector(state => state.cart);
-  const { products } = useSelector(state => state.product);
+  const { products, loading: productsLoading } = useSelector(state => state.product);
   const { categories } = useSelector(state => state.category);
 
   // Search state (just for navigation)
   const [searchText, setSearchText] = useState('');
+  const [fallbackMode, setFallbackMode] = useState(false);
 
   // Load all data when the screen opens/mounts
   useEffect(() => {
@@ -52,6 +54,18 @@ const Home = () => {
     return unsubscribe;
   }, [dispatch, navigation]);
 
+  // Use fallback data if products still not available after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!products || products.length === 0) {
+        console.log('Using fallback product data');
+        setFallbackMode(true);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [products]);
+
   // Handle search navigation
   const handleSearch = () => {
     if (searchText.trim()) {
@@ -61,6 +75,92 @@ const Home = () => {
       setSearchText('');
     }
   };
+
+  // Get products to display (real or fallback)
+  const allProducts = products && products.length > 0 ? products : fallbackMode ? ProductsData : [];
+
+  // Group products by category and limit to 4 per category
+  const groupProductsByCategory = () => {
+    if (!allProducts.length) return [];
+
+    const grouped = {};
+    
+    allProducts.forEach(product => {
+      let categoryName = 'Other';
+      
+      // Handle different category structures
+      if (product.category) {
+        if (typeof product.category === 'string') {
+          categoryName = product.category;
+        } else if (product.category.category) {
+          categoryName = product.category.category;
+        } else if (product.category._id) {
+          categoryName = product.category.name || product.category._id;
+        }
+      }
+      
+      if (!grouped[categoryName]) {
+        grouped[categoryName] = [];
+      }
+      
+      // Only add up to 4 products per category
+      if (grouped[categoryName].length < 4) {
+        grouped[categoryName].push(product);
+      }
+    });
+    
+    // Convert to array format for rendering
+    return Object.keys(grouped).map(categoryName => ({
+      categoryName,
+      products: grouped[categoryName]
+    }));
+  };
+
+  const categorizedProducts = groupProductsByCategory();
+
+  // Navigate to view all products in a category
+  const handleViewAllCategory = (categoryName) => {
+    console.log('Navigating to view all products for category:', categoryName);
+    navigation.navigate('SearchResults', {
+      categoryFilter: categoryName,
+      categoryName: categoryName,
+      initialSearchText: '',
+    });
+  };
+
+  // Render category section
+  const renderCategorySection = ({ categoryName, products }) => (
+    <View key={categoryName} style={styles.categorySection}>
+      <View style={styles.categoryHeader}>
+        <Text style={styles.categoryTitle}>{categoryName}</Text>
+        <TouchableOpacity 
+          onPress={() => handleViewAllCategory(categoryName)}
+          style={styles.viewAllButton}
+        >
+          <Text style={styles.viewAllText}>View All</Text>
+          <MaterialIcons name="arrow-forward" size={16} color="#1e3c72" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.categoryProducts}>
+        <View style={styles.productsRow}>
+          {products.slice(0, 2).map((product, index) => (
+            <View key={product._id || index} style={styles.productCard}>
+              <ProductsCard p={product} />
+            </View>
+          ))}
+        </View>
+        {products.length > 2 && (
+          <View style={styles.productsRow}>
+            {products.slice(2, 4).map((product, index) => (
+              <View key={product._id || index + 2} style={styles.productCard}>
+                <ProductsCard p={product} />
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
 
   return (
     <Layout>
@@ -151,9 +251,18 @@ const Home = () => {
         <Text style={styles.sectionTitle}>Featured Deals</Text>
         <Banner />
 
-        {/* Products Section */}
-        <Text style={styles.sectionTitle}>Popular Products</Text>
-        <Products />
+        {/* Products Section - Grouped by Category */}
+        {productsLoading && !allProducts.length ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading products...</Text>
+          </View>
+        ) : categorizedProducts.length > 0 ? (
+          categorizedProducts.map(renderCategorySection)
+        ) : (
+          <View style={styles.noProductsContainer}>
+            <Text style={styles.noProductsText}>No products available</Text>
+          </View>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>MyShop eCommerce v1.0</Text>
@@ -169,6 +278,71 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f8f9fa',
     minHeight: '100%',
+  },
+  categorySection: {
+    marginBottom: 25,
+    paddingHorizontal: 15,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  categoryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(30, 60, 114, 0.1)',
+    borderRadius: 20,
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: '#1e3c72',
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  categoryProducts: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  productsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  productCard: {
+    width: '48%',
+  },
+  loadingContainer: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#1e3c72',
+    fontWeight: '500',
+  },
+  noProductsContainer: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  noProductsText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
   },
   headerContainer: {
     marginBottom: 20,

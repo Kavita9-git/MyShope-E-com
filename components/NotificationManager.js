@@ -12,9 +12,14 @@ import {
   Switch,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSelector } from 'react-redux';
 import notificationService from '../services/NotificationService';
+import axiosInstance from '../utils/axiosConfig';
+import { server } from '../redux/store';
 
 const NotificationManager = ({ navigation }) => {
+  const { user, isAuth } = useSelector(state => state.user);
+  
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,25 +50,26 @@ const NotificationManager = ({ navigation }) => {
       
       // Get server notifications if user is authenticated
       let serverNotifications = [];
-      const userData = await AsyncStorage.getItem('userData');
       
-      if (userData) {
+      if (isAuth && user?._id) {
         try {
-          const { user, token } = JSON.parse(userData);
-          const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/user/${user._id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          const data = await response.json();
-          if (data.success) {
-            serverNotifications = data.data.notifications || [];
+          console.log('📱 Fetching notifications for user:', user._id);
+          const response = await axiosInstance.get(`/notification/user/${user._id}`);
+          console.log('📱 Notification API response:', response.data);
+          
+          if (response.data.success) {
+            serverNotifications = response.data.data.notifications || [];
+            console.log('📱 Found server notifications:', serverNotifications.length);
           }
         } catch (error) {
-          console.error('Error fetching server notifications:', error);
+          console.error('❌ Error fetching server notifications:', error.response?.data || error.message);
+          // If the endpoint doesn't exist, log it but don't fail completely
+          if (error.response?.status === 404) {
+            console.log('📱 Notification endpoint not found - user may not have notifications yet');
+          }
         }
+      } else {
+        console.log('📱 User not authenticated, skipping server notification fetch');
       }
       
       // Get local notifications (from push notifications received while app was running)
@@ -101,20 +107,12 @@ const NotificationManager = ({ navigation }) => {
 
   const loadPreferences = async () => {
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      if (!userData) return;
+      if (!isAuth || !user?._id) return;
       
-      const { token } = JSON.parse(userData);
-      const response = await fetch('https://nodejsapp-hfpl.onrender.com/api/v1/user/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-      if (data.success && data.user.notificationPreferences) {
-        setPreferences(data.user.notificationPreferences);
+      const response = await axiosInstance.get('/user/profile');
+      
+      if (response.data.success && response.data.user.notificationPreferences) {
+        setPreferences(response.data.user.notificationPreferences);
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
@@ -123,21 +121,14 @@ const NotificationManager = ({ navigation }) => {
 
   const updatePreferences = async (newPreferences) => {
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      if (!userData) return;
+      if (!isAuth || !user?._id) return;
       
-      const { token } = JSON.parse(userData);
-      const response = await fetch('https://nodejsapp-hfpl.onrender.com/api/v1/notification/preferences', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ preferences: newPreferences }),
+      const response = await axiosInstance.put('/notification/preferences', {
+        userId: user._id,
+        preferences: newPreferences
       });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.data.success) {
         setPreferences(newPreferences);
         Alert.alert('Success', 'Notification preferences updated');
       } else {
@@ -152,22 +143,13 @@ const NotificationManager = ({ navigation }) => {
   const markAsRead = async (notificationId) => {
     try {
       // First, try to mark server notification as read
-      const userData = await AsyncStorage.getItem('userData');
       let serverMarkSuccess = false;
       
-      if (userData) {
+      if (isAuth && user?._id) {
         try {
-          const { token } = JSON.parse(userData);
-          const response = await fetch(`https://nodejsapp-hfpl.onrender.com/api/v1/notification/read/${notificationId}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          const data = await response.json();
-          if (data.success) {
+          const response = await axiosInstance.put(`/notification/read/${notificationId}`);
+          
+          if (response.data.success) {
             serverMarkSuccess = true;
           }
         } catch (serverError) {

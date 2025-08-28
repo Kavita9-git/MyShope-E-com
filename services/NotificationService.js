@@ -3,7 +3,8 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
+import { server } from '../redux/store';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -128,7 +129,7 @@ class NotificationService {
         await AsyncStorage.setItem('@push_token', token);
         this.token = token;
         
-        // Send token to backend
+        // Send token to backend (userId will be fetched automatically if user is logged in)
         await this.sendTokenToBackend(token);
         
       } catch (error) {
@@ -147,15 +148,30 @@ class NotificationService {
   }
 
   // Send push token to backend server
-  async sendTokenToBackend(token) {
+  async sendTokenToBackend(token, userId = null) {
     try {
-      // Get user info from AsyncStorage
-      const userInfo = await AsyncStorage.getItem('userData');
-      const user = userInfo ? JSON.parse(userInfo) : null;
+      // If no userId provided, try to get it from auth token
+      if (!userId) {
+        const authToken = await AsyncStorage.getItem('@auth');
+        if (authToken) {
+          // We have an auth token, so user is logged in, but we need to get the user ID from the backend
+          console.log('📱 Auth token found, getting user profile for push token registration');
+          try {
+            const userProfileResponse = await axiosInstance.get('/user/profile');
+            if (userProfileResponse.data.success) {
+              userId = userProfileResponse.data.user._id;
+            }
+          } catch (profileError) {
+            console.log('⚠️ Could not get user profile for push token registration:', profileError.message);
+          }
+        }
+      }
       
-      const response = await axios.post('https://nodejsapp-hfpl.onrender.com/api/v1/notification/register-token', {
+      console.log('📱 Registering push token with backend, userId:', userId);
+      
+      const response = await axiosInstance.post('/notification/register-token', {
         pushToken: token,
-        userId: user?.user?._id || null,
+        userId: userId,
         deviceInfo: {
           platform: Platform.OS,
           deviceName: Device.deviceName,
@@ -164,8 +180,10 @@ class NotificationService {
       });
       
       console.log('✅ Token registered with backend:', response.data);
+      return response.data;
     } catch (error) {
       console.error('❌ Failed to register token with backend:', error.response?.data || error.message);
+      throw error;
     }
   }
 

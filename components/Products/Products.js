@@ -88,10 +88,32 @@ const Products = ({ searchText = "", filterOptions = null }) => {
               product.category._id
             );
           }
-          // Handle case when category is a direct ID string
-          else if (product.category) {
-            return filterOptions.selectedCategories.includes(product.category);
+          // Handle case when category is a direct string
+          else if (product.category && typeof product.category === "string") {
+            // Try matching by string directly first
+            let matches = filterOptions.selectedCategories.includes(product.category);
+            
+            // If no direct match, try case-insensitive name matching
+            if (!matches) {
+              matches = filterOptions.selectedCategories.some(selectedId => {
+                return selectedId.toLowerCase() === product.category.toLowerCase();
+              });
+            }
+            return matches;
           }
+          // Handle case when category is an object with category property
+          else if (
+            product.category &&
+            typeof product.category === "object" &&
+            product.category.category
+          ) {
+            // Try matching by category name
+            const categoryName = product.category.category.toLowerCase();
+            return filterOptions.selectedCategories.some(selectedId => {
+              return selectedId.toLowerCase() === categoryName;
+            });
+          }
+          
           return false;
         });
       }
@@ -161,7 +183,7 @@ const Products = ({ searchText = "", filterOptions = null }) => {
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={false}
+          style={styles.flatList}
         />
       )}
     </View>
@@ -171,15 +193,20 @@ const Products = ({ searchText = "", filterOptions = null }) => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#f8f9fa",
+    flex: 1,
     marginHorizontal: 15,
     borderRadius: 12,
     marginBottom: 20,
     overflow: "hidden",
   },
+  flatList: {
+    flex: 1,
+  },
   centered: {
     justifyContent: "center",
     alignItems: "center",
     padding: 30,
+    flex: 1,
   },
   loadingText: {
     marginTop: 10,
@@ -199,7 +226,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: 10,
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
 });
 
