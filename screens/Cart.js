@@ -346,14 +346,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 14,
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
     marginBottom: 6,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 11,
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
   },

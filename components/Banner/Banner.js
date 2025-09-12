@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 15,
-    borderRadius: 12,
+    borderRadius: 0,
     marginBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -72,11 +72,14 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     overflow: "hidden",
-    borderRadius: 12,
+    borderRadius: 0,
   },
   card: {
     width: width - 30,
     height: width * 0.4,
+    height: 180,
+    resizeMode: "cover",
+    borderRadius: 0,
   },
   cornerLabel: {
     position: "absolute",
@@ -95,3 +98,5 @@ const styles = StyleSheet.create({
   },
 });
 export default Banner;
+
+

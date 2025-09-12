@@ -297,18 +297,28 @@ export const clearMessage = () => dispatch => {
 };
 
 //LOGOUT
-export const logout = () => async dispatch => {
-  console.log('[userActions] logout called');
+export const logout = (silent = false) => async dispatch => {
+  console.log('[userActions] logout called, silent:', silent);
   try {
     console.log('[userActions] Dispatching logoutRequest');
     dispatch({
       type: 'logoutRequest',
     });
-    //HITTING NODE LOGOUT API REQUEST
-    const { data } = await axiosInstance.get(`/user/logout`);
-    console.log('[userActions] logout API response:', data);
+    
+    // Try to hit logout API, but don't fail if it doesn't work (especially for auth errors)
+    let data = null;
+    try {
+      if (!silent) {
+        //HITTING NODE LOGOUT API REQUEST
+        const response = await axiosInstance.get(`/user/logout`);
+        data = response.data;
+        console.log('[userActions] logout API response:', data);
+      }
+    } catch (apiError) {
+      console.log('[userActions] logout API call failed (continuing with local cleanup):', apiError.message);
+    }
 
-    // Clear token from storage
+    // Always clear token from storage regardless of API call success
     console.log('[userActions] Removing auth token from AsyncStorage');
     await AsyncStorage.removeItem('@auth');
     await AsyncStorage.setItem('@showLogin', 'true');
@@ -321,14 +331,26 @@ export const logout = () => async dispatch => {
 
     dispatch({
       type: 'logoutSuccess',
-      payload: data?.message,
+      payload: data?.message || (silent ? 'Session cleared' : 'Logged out successfully'),
     });
     return data;
   } catch (error) {
     console.log('[userActions] logout error:', error.response?.data || error.message);
+    
+    // Even if logout fails, still clear local storage and headers
+    try {
+      await AsyncStorage.removeItem('@auth');
+      await AsyncStorage.setItem('@showLogin', 'true');
+      await AsyncStorage.removeItem('@isAuth');
+      delete axios.defaults.headers.common['Authorization'];
+      delete axiosInstance.defaults.headers.common['Authorization'];
+    } catch (cleanupError) {
+      console.log('[userActions] Error during cleanup:', cleanupError);
+    }
+    
     return dispatch({
-      type: 'logoutFail',
-      payload: error.response?.data?.message || error.message,
+      type: 'logoutSuccess', // Still dispatch success to ensure UI updates
+      payload: silent ? 'Session cleared' : (error.response?.data?.message || error.message),
     });
   }
 };

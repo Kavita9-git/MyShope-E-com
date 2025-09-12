@@ -254,8 +254,10 @@ const ManageUsers = ({ navigation }) => {
                 ? item?.profilePic?.url.startsWith("http")
                   ? item?.profilePic?.url
                   : `https://nodejsapp-hfpl.onrender.com${item?.profilePic?.url}`
-                : item?.profilePic.startsWith("http")
-                ? item?.profilePic
+                : item?.profilePic?.startsWith
+                ? item?.profilePic.startsWith("http")
+                  ? item?.profilePic
+                  : `https://nodejsapp-hfpl.onrender.com${item?.profilePic}`
                 : `https://nodejsapp-hfpl.onrender.com${item?.profilePic}`,
             }}
             style={styles.userAvatar}
@@ -333,8 +335,10 @@ const ManageUsers = ({ navigation }) => {
                           ? selectedUser.profilePic?.url.startsWith("http")
                             ? selectedUser.profilePic?.url
                             : `https://nodejsapp-hfpl.onrender.com${selectedUser.profilePic?.url}`
-                          : selectedUser.profilePic.startsWith("http")
-                          ? selectedUser.profilePic
+                          : selectedUser.profilePic?.startsWith
+                          ? selectedUser.profilePic.startsWith("http")
+                            ? selectedUser.profilePic
+                            : `https://nodejsapp-hfpl.onrender.com${selectedUser.profilePic}`
                           : `https://nodejsapp-hfpl.onrender.com${selectedUser.profilePic}`,
                       }}
                       style={styles.modalUserAvatar}

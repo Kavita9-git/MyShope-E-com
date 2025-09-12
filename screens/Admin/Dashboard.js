@@ -1,17 +1,11 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import React from "react";
-import Layout from "../../components/Layout/Layout";
-import AntDesign from "react-native-vector-icons/AntDesign";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import Feather from "react-native-vector-icons/Feather";
-import { LinearGradient } from "expo-linear-gradient";
-import useProtectedRoute from "../../hooks/useProtectedRoute";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React from 'react';
+import Layout from '../../components/Layout/Layout';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Feather from 'react-native-vector-icons/Feather';
+import { LinearGradient } from 'expo-linear-gradient';
+import useProtectedRoute from '../../hooks/useProtectedRoute';
 
 const Dashboard = ({ navigation }) => {
   // Use protected route hook with admin privileges required
@@ -22,7 +16,7 @@ const Dashboard = ({ navigation }) => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
           <LinearGradient
-            colors={["#1e3c72", "#2a5298"]}
+            colors={['#1e3c72', '#2a5298']}
             style={styles.headerGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -36,7 +30,7 @@ const Dashboard = ({ navigation }) => {
 
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: "#ebf8ff" }]}>
+            <View style={[styles.statIconBox, { backgroundColor: '#ebf8ff' }]}>
               <Feather name="shopping-bag" size={24} color="#3182ce" />
             </View>
             <View style={styles.statInfo}>
@@ -52,7 +46,7 @@ const Dashboard = ({ navigation }) => {
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: "#feebef" }]}>
+            <View style={[styles.statIconBox, { backgroundColor: '#feebef' }]}>
               <Feather name="users" size={24} color="#e53e3e" />
             </View>
             <View style={styles.statInfo}>
@@ -72,10 +66,10 @@ const Dashboard = ({ navigation }) => {
         <View style={styles.btnContainer}>
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("managecategories")}
+            onPress={() => navigation.navigate('managecategories')}
           >
             <LinearGradient
-              colors={["#4facfe", "#00f2fe"]}
+              colors={['#4facfe', '#00f2fe']}
               style={styles.iconGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -84,19 +78,17 @@ const Dashboard = ({ navigation }) => {
             </LinearGradient>
             <View style={styles.btnTextContainer}>
               <Text style={styles.btnText}>Manage Categories</Text>
-              <Text style={styles.btnSubText}>
-                Add, edit or delete categories
-              </Text>
+              <Text style={styles.btnSubText}>Add, edit or delete categories</Text>
             </View>
             <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("manageproducts")}
+            onPress={() => navigation.navigate('manageproducts')}
           >
             <LinearGradient
-              colors={["#6a11cb", "#2575fc"]}
+              colors={['#6a11cb', '#2575fc']}
               style={styles.iconGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -105,19 +97,14 @@ const Dashboard = ({ navigation }) => {
             </LinearGradient>
             <View style={styles.btnTextContainer}>
               <Text style={styles.btnText}>Manage Products</Text>
-              <Text style={styles.btnSubText}>
-                Create and update your products
-              </Text>
+              <Text style={styles.btnSubText}>Create and update your products</Text>
             </View>
             <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("manageorders")}
-          >
+          <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('manageorders')}>
             <LinearGradient
-              colors={["#ff9a9e", "#fad0c4"]}
+              colors={['#ff9a9e', '#fad0c4']}
               style={styles.iconGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -126,19 +113,14 @@ const Dashboard = ({ navigation }) => {
             </LinearGradient>
             <View style={styles.btnTextContainer}>
               <Text style={styles.btnText}>Manage Orders</Text>
-              <Text style={styles.btnSubText}>
-                Track and update order status
-              </Text>
+              <Text style={styles.btnSubText}>Track and update order status</Text>
             </View>
             <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate("manageusers")}
-          >
+          <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('manageusers')}>
             <LinearGradient
-              colors={["#f093fb", "#f5576c"]}
+              colors={['#f093fb', '#f5576c']}
               style={styles.iconGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -147,19 +129,17 @@ const Dashboard = ({ navigation }) => {
             </LinearGradient>
             <View style={styles.btnTextContainer}>
               <Text style={styles.btnText}>Manage Users</Text>
-              <Text style={styles.btnSubText}>
-                View and manage user accounts
-              </Text>
+              <Text style={styles.btnSubText}>View and manage user accounts</Text>
             </View>
             <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.btn}
-            onPress={() => navigation.navigate("managenotifications")}
+            onPress={() => navigation.navigate('managenotifications')}
           >
             <LinearGradient
-              colors={["#667eea", "#764ba2"]}
+              colors={['#667eea', '#764ba2']}
               style={styles.iconGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -168,14 +148,12 @@ const Dashboard = ({ navigation }) => {
             </LinearGradient>
             <View style={styles.btnTextContainer}>
               <Text style={styles.btnText}>Manage Notifications</Text>
-              <Text style={styles.btnSubText}>
-                Send notifications and manage settings
-              </Text>
+              <Text style={styles.btnSubText}>Send notifications and manage settings</Text>
             </View>
             <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {/*<TouchableOpacity
             style={styles.btn}
             onPress={() => navigation.navigate("about")}
           >
@@ -194,7 +172,7 @@ const Dashboard = ({ navigation }) => {
               </Text>
             </View>
             <MaterialIcons name="chevron-right" size={24} color="#a0aec0" />
-          </TouchableOpacity>
+          </TouchableOpacity>*/}
         </View>
 
         <View style={styles.footer}>
@@ -208,45 +186,45 @@ const Dashboard = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: '#f8f9fa',
   },
   headerContainer: {
     marginBottom: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   headerGradient: {
     paddingVertical: 30,
     paddingHorizontal: 20,
   },
   headerContent: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   heading: {
-    color: "#ffffff",
+    color: '#ffffff',
     fontSize: 28,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 5,
   },
   subHeading: {
-    color: "rgba(255,255,255,0.8)",
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 16,
   },
   statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: 15,
     marginBottom: 25,
   },
   statCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     padding: 15,
     borderRadius: 12,
-    width: "48%",
-    shadowColor: "#000",
+    width: '48%',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -256,8 +234,8 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 10,
   },
   statInfo: {
@@ -265,34 +243,34 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
+    fontWeight: '700',
+    color: '#333',
   },
   statLabel: {
     fontSize: 12,
-    color: "#718096",
+    color: '#718096',
   },
   statArrow: {
     opacity: 0.6,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 15,
     paddingHorizontal: 15,
-    color: "#333",
+    color: '#333',
   },
   btnContainer: {
     paddingHorizontal: 15,
   },
   btn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -305,8 +283,8 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 15,
   },
   btnTextContainer: {
@@ -314,21 +292,21 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 2,
   },
   btnSubText: {
     fontSize: 12,
-    color: "#718096",
+    color: '#718096',
   },
   footer: {
     marginTop: 20,
     marginBottom: 30,
-    alignItems: "center",
+    alignItems: 'center',
   },
   footerText: {
-    color: "#a0aec0",
+    color: '#a0aec0',
     fontSize: 12,
   },
 });

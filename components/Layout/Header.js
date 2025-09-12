@@ -114,9 +114,9 @@ const Header = () => {
             style={styles.logoContainer}
             onPress={() => navigation.navigate("home")}
           >
-            <View style={styles.logoIconContainer}>
+            {/* <View style={styles.logoIconContainer}>
               <AntDesign name="appstore1" size={20} color="#fff" />
-            </View>
+            </View> */}
             <View style={styles.logoTextContainer}>
               <Text style={styles.logoTitle}>My</Text>
               <Text style={styles.logoSubTitle}>Shop</Text>
@@ -140,7 +140,7 @@ const Header = () => {
                     style={{ width: 40, height: 40, borderRadius: 20 }}
                   />
                 ) : (
-                  <FontAwesome5 name="user-circle" size={18} color="#fff" />
+                  <FontAwesome5 name="user-circle" size={16} color="#fff" />
                 )}
               </View>
               <Text style={styles.navText}>Account</Text>
@@ -155,7 +155,7 @@ const Header = () => {
                 <View
                   style={[styles.navIconCircle, { backgroundColor: "#ff416c" }]}
                 >
-                  <AntDesign name="heart" size={18} color="#fff" />
+                  <AntDesign name="heart" size={16} color="#fff" />
                 </View>
                 {wishlistItemsCount > 0 && (
                   <View style={styles.badge}>
@@ -175,7 +175,7 @@ const Header = () => {
                 <View
                   style={[styles.navIconCircle, { backgroundColor: "#7c3aed" }]}
                 >
-                  <AntDesign name="bells" size={18} color="#fff" />
+                  <AntDesign name="bells" size={16} color="#fff" />
                 </View>
                 {unreadNotifications > 0 && (
                   <View style={styles.badge}>
@@ -195,7 +195,7 @@ const Header = () => {
                 <View
                   style={[styles.navIconCircle, { backgroundColor: "#4facfe" }]}
                 >
-                  <Feather name="shopping-cart" size={18} color="#fff" />
+                  <Feather name="shopping-cart" size={16} color="#fff" />
                 </View>
                 {cartItemsCount > 0 && (
                   <View style={styles.badge}>

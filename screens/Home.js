@@ -18,6 +18,8 @@ import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
+import BestDeals from '../components/BestDeals/BestDeals';
+
 
 const Home = () => {
   const navigation = useNavigation();
@@ -84,10 +86,10 @@ const Home = () => {
     if (!allProducts.length) return [];
 
     const grouped = {};
-    
+
     allProducts.forEach(product => {
       let categoryName = 'Other';
-      
+
       // Handle different category structures
       if (product.category) {
         if (typeof product.category === 'string') {
@@ -98,17 +100,17 @@ const Home = () => {
           categoryName = product.category.name || product.category._id;
         }
       }
-      
+
       if (!grouped[categoryName]) {
         grouped[categoryName] = [];
       }
-      
+
       // Only add up to 4 products per category
       if (grouped[categoryName].length < 4) {
         grouped[categoryName].push(product);
       }
     });
-    
+
     // Convert to array format for rendering
     return Object.keys(grouped).map(categoryName => ({
       categoryName,
@@ -133,7 +135,7 @@ const Home = () => {
     <View key={categoryName} style={styles.categorySection}>
       <View style={styles.categoryHeader}>
         <Text style={styles.categoryTitle}>{categoryName}</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => handleViewAllCategory(categoryName)}
           style={styles.viewAllButton}
         >
@@ -167,7 +169,7 @@ const Home = () => {
       <Header />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Gradient Header */}
-        <View style={styles.headerContainer}>
+        {/* <View style={styles.headerContainer}>
           <LinearGradient
             colors={['#1e3c72', '#2a5298']}
             style={styles.headerGradient}
@@ -182,7 +184,7 @@ const Home = () => {
               <Text style={styles.headerSubtitle}>Discover amazing products</Text>
             </View>
           </LinearGradient>
-        </View>
+        </View> */}
 
         {/* Simple Search Bar (no filtering) */}
         <View style={styles.searchBarContainer}>
@@ -209,7 +211,7 @@ const Home = () => {
         </View>
 
         {/* Stats Cards */}
-        <View style={styles.statsContainer}>
+        {/* <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <View style={[styles.statIconBox, { backgroundColor: '#ebf8ff' }]}>
               <Feather name="tag" size={24} color="#3182ce" />
@@ -241,15 +243,18 @@ const Home = () => {
               style={styles.statArrow}
             />
           </View>
-        </View>
+        </View> */}
+
+        {/* Banner Section */}
+        {/* <Text style={styles.sectionTitle}>Featured Deals</Text> */}
+        <Banner />
 
         {/* Categories Section */}
         <Text style={styles.sectionTitle}>Shop by Category</Text>
         <Categories />
 
-        {/* Banner Section */}
-        <Text style={styles.sectionTitle}>Featured Deals</Text>
-        <Banner />
+        {/* Best Deals Section */}
+        <BestDeals />
 
         {/* Products Section - Grouped by Category */}
         {productsLoading && !allProducts.length ? (
@@ -276,7 +281,8 @@ export default Home;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f1f2f4',
+
     minHeight: '100%',
   },
   categorySection: {
@@ -303,7 +309,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   viewAllText: {
-    fontSize: 14,
+    fontSize: 9,
     color: '#1e3c72',
     fontWeight: '600',
     marginRight: 4,
@@ -331,7 +337,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 10,
     color: '#1e3c72',
     fontWeight: '500',
   },
@@ -340,7 +346,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noProductsText: {
-    fontSize: 16,
+    fontSize: 10,
     color: '#666',
     fontWeight: '500',
   },
@@ -366,16 +372,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    borderColor: '#fff',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 12,
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
     marginBottom: 6,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
   },
@@ -384,6 +391,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     marginBottom: 25,
+    marginTop: 10,
   },
   searchBar: {
     flex: 1,
@@ -455,7 +463,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '700',
     color: '#333',
   },
@@ -467,7 +475,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 11,
     fontWeight: 'bold',
     marginBottom: 10,
     paddingHorizontal: 15,
@@ -480,6 +488,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#a0aec0',
-    fontSize: 12,
+    fontSize: 10,
   },
 });

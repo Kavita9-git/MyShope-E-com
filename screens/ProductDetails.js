@@ -1601,7 +1601,7 @@ const styles = StyleSheet.create({
   addToCartText: {
     color: '#ffffff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 9,
     letterSpacing: 0.5,
   },
   footer: {

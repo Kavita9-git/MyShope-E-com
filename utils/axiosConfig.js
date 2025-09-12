@@ -27,16 +27,25 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // Handle 401 Unauthorized errors
     if (error.response && error.response.status === 401) {
-      // Token expired or invalid, dispatch logout action
+      console.log('401 Unauthorized - clearing session and redirecting to login');
       store.dispatch(logout());
+      return Promise.reject(error);
     }
 
+    // Handle 500 errors, specifically "Error in Auth Middleware"
     if (error.response && error.response.status === 500) {
-      try {
-        console.log(`${error?.response?.data?.message || 'Internal Server Error'}`);
-      } catch (err) {
-        console.error('Error!:', err);
+      const errorMessage = error?.response?.data?.message || 'Internal Server Error';
+      console.log(`500 Server Error: ${errorMessage}`);
+      
+      // Check if the error message contains "Error in Auth Middleware"
+      if (errorMessage.includes('Error in Auth Middleware')) {
+        console.log('Auth Middleware error detected - clearing session and redirecting to login');
+        // Clear session and redirect to login silently
+        store.dispatch(logout(true)); // Pass true for silent logout
+        // Don't show the error message to user for auth middleware errors
+        return Promise.reject(new Error('Session expired. Please log in again.'));
       }
     }
 
