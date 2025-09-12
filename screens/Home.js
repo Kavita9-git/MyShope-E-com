@@ -19,6 +19,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import BestDeals from '../components/BestDeals/BestDeals';
+import Trendings from '../components/Trendings/Trendings';
 
 
 const Home = () => {
@@ -255,6 +256,7 @@ const Home = () => {
 
         {/* Best Deals Section */}
         <BestDeals />
+        <Trendings />
 
         {/* Products Section - Grouped by Category */}
         {productsLoading && !allProducts.length ? (
