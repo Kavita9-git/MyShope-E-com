@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   categoryTitle: {
-    fontSize: 18,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -377,14 +377,14 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
   headerTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
     marginBottom: 6,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
   },
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statValue: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#333',
   },

@@ -864,12 +864,12 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: "#333",
     marginBottom: 6,
     height: 38,
-    lineHeight: 19,
+    lineHeight: 10,
   },
   priceRow: {
     flexDirection: "row",
@@ -878,7 +878,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardPrice: {
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: "700",
     color: "#1e3c72",
   },
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
   },
   stockText: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#e53e3e",
     fontWeight: "500",
   },
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     marginRight: 2,
   },
   reviewCount: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#718096",
     marginLeft: 2,
   },
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: "#DC2626",
-    fontSize: 10,
+    fontSize: 9,
     textAlign: "center",
   },
   btnContainer: {
@@ -938,7 +938,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   btnText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
     color: "#333",
     marginLeft: 4,
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   cartBtnText: {
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: "600",
     color: "#fff",
   },
@@ -1005,7 +1005,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   modalProductPrice: {
-    fontSize: 18,
+    fontSize: 10,
     fontWeight: "700",
     color: "#1e3c72",
   },
