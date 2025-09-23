@@ -944,7 +944,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   cartButton: {
-    width: "70%",
+    width: "75%",
     borderRadius: 6,
     overflow: "hidden",
   },

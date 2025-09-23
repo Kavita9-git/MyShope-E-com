@@ -8,7 +8,8 @@ import {
   Pressable,
 } from "react-native";
 import Carousel, { PaginationLight } from "react-native-x-carousel";
-import { BannerData } from "../../data/BannerData"; // Assuming you have a data file with banner data
+import { BannerData } from "../../data/BannerData"; 
+
 const { width } = Dimensions.get("window");
 
 const Banner = () => {
@@ -52,51 +53,37 @@ const Banner = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 15,
-    borderRadius: 0,
+    width,                 // full device width
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 3,
-    overflow: "hidden",
+    backgroundColor: "#fff",
   },
   cardContainer: {
+    width,
     alignItems: "center",
     justifyContent: "center",
-    width,
   },
   cardWrapper: {
+    width,
     overflow: "hidden",
-    borderRadius: 0,
   },
   card: {
-    width: width - 30,
-    height: width * 0.4,
-    height: 180,
+    width,                // full width (removed -30)
+    height: 180,          // adjust as needed
     resizeMode: "cover",
-    borderRadius: 0,
   },
   cornerLabel: {
     position: "absolute",
     bottom: 0,
     right: 0,
     borderTopLeftRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   cornerLabelText: {
     fontSize: 12,
     color: "#fff",
     fontWeight: "600",
-    paddingLeft: 0,
-    paddingRight: 0,
-    paddingTop: 2,
-    paddingBottom: 2,
-  }, 
+  },
 });
+
 export default Banner;
-
-
