@@ -861,14 +861,14 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardContent: {
-    padding: 12,
+    padding: 7,
   },
   cardTitle: {
     fontSize: 12,
     fontWeight: "600",
     color: "#333",
     marginBottom: 6,
-    height: 38,
+    height: 19,
     lineHeight: 10,
   },
   priceRow: {
@@ -934,17 +934,17 @@ const styles = StyleSheet.create({
     borderColor: "#e0e5eb",
     justifyContent: "center",
     alignItems: "center",
-    width: "30%",
+    width: "5%",
     flexDirection: "row",
   },
   btnText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "600",
     color: "#333",
     marginLeft: 4,
   },
   cartButton: {
-    width: "65%",
+    width: "70%",
     borderRadius: 6,
     overflow: "hidden",
   },

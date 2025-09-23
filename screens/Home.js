@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   categoryProducts: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 10,
+    padding: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
