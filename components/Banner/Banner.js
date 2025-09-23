@@ -91,11 +91,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#fff",
     fontWeight: "600",
-    paddingLeft: 5,
-    paddingRight: 5,
+    paddingLeft: 0,
+    paddingRight: 0,
     paddingTop: 2,
     paddingBottom: 2,
-  },
+  }, 
 });
 export default Banner;
 
