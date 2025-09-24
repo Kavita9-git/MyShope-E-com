@@ -292,7 +292,7 @@ const Checkout = ({ navigation }) => {
       >
         <View style={styles.headerContainer}>
           <LinearGradient
-            colors={['#1e3c72', '#2a5298']}
+            colors={['#0075f8', '#0075f8']}
             style={styles.headerGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -376,7 +376,7 @@ const Checkout = ({ navigation }) => {
             style={styles.placeOrderButton}
           >
             <LinearGradient
-              colors={['#1e3c72', '#2a5298']}
+              colors={['#ff8c00', '#ff8a17']}
               style={styles.placeOrderGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
