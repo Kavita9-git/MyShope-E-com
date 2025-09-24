@@ -35,28 +35,28 @@ const Footer = () => {
       label: 'Home',
       icon: 'home',
       iconType: 'ant',
-      gradient: ['#4facfe', '#00f2fe'],
+      gradient: ['#0075f8', '#0075f8'],
     },
     {
       name: 'notifications',
       label: 'Notify',
       icon: 'bell',
       iconType: 'feather',
-      gradient: ['#b721ff', '#21d4fd'],
+      gradient: ['#0075f8', '#0075f8'],
     },
     {
       name: 'account',
       label: 'Account',
       icon: 'user',
       iconType: 'ant',
-      gradient: ['#6a11cb', '#2575fc'],
+      gradient: ['#0075f8', '#0075f8'],
     },
     {
       name: 'cart',
       label: 'Cart',
       icon: 'shopping-cart',
       iconType: 'feather',
-      gradient: ['#ff9a9e', '#fad0c4'],
+      gradient: ['#0075f8', '#0075f8'],
       badge: cartCount,
     },
     {
@@ -64,7 +64,7 @@ const Footer = () => {
       label: 'Logout',
       icon: 'log-out',
       iconType: 'feather',
-      gradient: ['#FF416C', '#FF4B2B'],
+      gradient: ['#0075f8', '#0075f8'],
     },
   ];
 

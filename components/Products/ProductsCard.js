@@ -408,7 +408,7 @@ const ProductsCard = ({ p }) => {
                 colors={
                   (p?.stock || p?.quantity || 0) <= 0
                     ? ["#cccccc", "#999999"]
-                    : ["#1e3c72", "#2a5298"]
+                    : ["#0075f8", "#0075f8"]
                 }
                 style={styles.cartButtonGradient}
                 start={{ x: 0, y: 0 }}
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
     marginBottom: 6,
-    height: 19,
+    height: 25,
     lineHeight: 10,
   },
   priceRow: {

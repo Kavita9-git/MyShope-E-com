@@ -102,9 +102,9 @@ const Header = () => {
   }, []);
   return (
     <>
-      <StatusBar backgroundColor="#1e3c72" barStyle="light-content" />
+      <StatusBar backgroundColor="#0075f8" barStyle="light-content" />
       <LinearGradient
-        colors={["#1e3c72", "#2a5298"]}
+        colors={["#0075f8", "#0075f8"]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
@@ -241,12 +241,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   logoTitle: {
-    fontSize: 20,
+    fontSize: 15,
     color: "#4cb5f9",
     fontWeight: "bold",
   },
   logoSubTitle: {
-    fontSize: 20,
+    fontSize: 15,
     color: "#ffffff",
     fontWeight: "bold",
   },

@@ -362,6 +362,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 30,
     paddingHorizontal: 20,
+    backgroundColor: '#1e3c72',
   },
   headerContent: {
     alignItems: 'center',
@@ -399,7 +400,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#94999f24',
     paddingHorizontal: 15,
     height: 45,
     borderRadius: 8,
@@ -408,6 +409,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
   },
   searchIcon: {
     marginRight: 10,
@@ -421,7 +423,7 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   filterButton: {
-    backgroundColor: '#1e3c72',
+    backgroundColor: '#0075f8',
     width: 45,
     height: 45,
     borderRadius: 8,

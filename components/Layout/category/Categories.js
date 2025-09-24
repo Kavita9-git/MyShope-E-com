@@ -27,7 +27,7 @@ const Categories = () => {
     Watches: "https://rukminim2.flixcart.com/image/128/128/xif0q/watch/h/e/s/-original-imahfspudkzsnssw.jpeg?q=70",
     Accessories: "https://rukminim2.flixcart.com/image/128/128/xif0q/sunglass/n/b/6/free-size-iron-man-tony-stark-avengers-infinity-war-being-better-original-imah5x9znxbcwv4w.jpeg?q=70",
     Smartwatch: "https://rukminim2.flixcart.com/image/612/612/xif0q/watch/u/1/g/-original-imahfsz7cuzxhcfy.jpeg?q=70",
-    Food: "https://rukminim2.flixcart.com/image/612/612/xif0q/ghee/f/j/f/500-sahiwal-a2-desi-cow-ghee-pure-bilona-supports-health-original-imah73xyubchbv3z.jpeg?q=70",
+    Food: "https://cdn-icons-png.flaticon.com/128/2674/2674067.png",
     Appliances: "https://rukminim2.flixcart.com/fk-p-flap/128/128/image/7f37937d6041e9d3.png?q=100",
     Electronics: "https://rukminim2.flixcart.com/fk-p-flap/128/128/image/6a3f1d3e2ec3f4dc.png?q=100",
     Beauty: "https://rukminim2.flixcart.com/fk-p-flap/128/128/image/83ea0f8e481ef770.png?q=100",
@@ -94,6 +94,8 @@ const styles = StyleSheet.create({
   outerContainer: {
     marginTop: 10,
     marginBottom: 20,
+    marginLeft: 10,
+    marginRight:10,
   },
   container: {
     flexDirection: "row",
