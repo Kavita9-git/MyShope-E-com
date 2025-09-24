@@ -627,7 +627,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e1e5e9',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 16,
+    marginLeft:32,
     fontWeight: 'bold',
     color: '#333',
   },

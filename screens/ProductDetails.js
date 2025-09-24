@@ -665,7 +665,7 @@ const ProductDetails = ({ route, navigation }) => {
       >
         <View style={styles.headerContainer}>
           <LinearGradient
-            colors={['#1e3c72', '#2a5298']}
+            colors={['#0075f8', '#0075f8']}
             style={styles.headerGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -727,7 +727,7 @@ const ProductDetails = ({ route, navigation }) => {
               disabled={currentIndex === 0}
               style={[styles.navButton, currentIndex === 0 && styles.navButtonDisabled]}
             >
-              <Icon name="chevron-left" size={24} color="#2a5298" />
+              <Icon name="chevron-left" size={24} color="#0075f8" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={goToNext}
@@ -737,7 +737,7 @@ const ProductDetails = ({ route, navigation }) => {
                 currentIndex === (currentImages?.length || 1) - 1 && styles.navButtonDisabled,
               ]}
             >
-              <Icon name="chevron-right" size={24} color="#2a5298" />
+              <Icon name="chevron-right" size={24} color="#0075f8" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1050,7 +1050,7 @@ const ProductDetails = ({ route, navigation }) => {
                 disabled={isSubmittingReview || !reviewComment.trim()}
               >
                 <LinearGradient
-                  colors={!reviewComment.trim() ? ['#ccc', '#999'] : ['#1e3c72', '#2a5298']}
+                  colors={!reviewComment.trim() ? ['#ccc', '#999'] : ['#0075f8', '#0075f8']}
                   style={styles.submitReviewButtonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -1107,11 +1107,11 @@ const ProductDetails = ({ route, navigation }) => {
             <Text style={styles.quantityLabel}>Quantity:</Text>
             <View style={styles.quantityControls}>
               <TouchableOpacity style={styles.quantityButton} onPress={() => handleRemoveQty()}>
-                <AntDesign name="minus" size={16} color="#2a5298" />
+                <AntDesign name="minus" size={16} color="#0075f8" />
               </TouchableOpacity>
               <Text style={styles.quantityValue}>{qty}</Text>
               <TouchableOpacity style={styles.quantityButton} onPress={() => handleAddQty()}>
-                <AntDesign name="plus" size={16} color="#2a5298" />
+                <AntDesign name="plus" size={16} color="#0075f8" />
               </TouchableOpacity>
             </View>
           </View>
@@ -1126,7 +1126,7 @@ const ProductDetails = ({ route, navigation }) => {
             <LinearGradient
               colors={
                 (selectedSize ? selectedSize.stock > 0 : pDetails?.stock > 0)
-                  ? ['#1e3c72', '#2a5298']
+                  ? ['#0075f8', '#0075f8']
                   : ['#999', '#777']
               }
               style={styles.addToCartButton}
@@ -1767,7 +1767,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#2a5298',
+    backgroundColor: '#0075f8',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,

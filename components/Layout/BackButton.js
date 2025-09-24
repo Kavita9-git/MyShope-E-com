@@ -20,7 +20,7 @@ const BackButton = ({ color = "#fff", size = 24 }) => {
       activeOpacity={0.7}
     >
       <LinearGradient
-        colors={["#1e3c72", "#2a5298"]}
+        colors={["#0075f8", "#0075f8"]}
         style={styles.buttonGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
@@ -44,8 +44,8 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   buttonGradient: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
