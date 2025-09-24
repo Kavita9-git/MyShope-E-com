@@ -782,6 +782,7 @@ const ProductsCard = ({ p }) => {
 };
 
 const styles = StyleSheet.create({
+  
   cardContainer: {
     width: (width - 40) / 2,
     marginBottom: 15,

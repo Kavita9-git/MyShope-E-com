@@ -441,6 +441,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     marginBottom: 25,
+     backgroundColor: '#fff',
   },
   statCard: {
     flexDirection: 'row',
