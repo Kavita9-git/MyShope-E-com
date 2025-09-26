@@ -1,52 +1,65 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux'; // ⬅️ Import to access categories from Redux
 
 const bestDealsData = [
   {
     id: '1',
-    // title: 'Ethnic Sets',
-    // subtitle: 'Under ₹799',
     image: 'https://assets.myntassets.com/f_webp,w_163,c_limit,fl_progressive,dpr_2.0/assets/images/2025/SEPTEMBER/10/5YMC9owN_1ba5c8b696fa46aea87c3169821c3e57.jpg',
   },
   {
     id: '2',
-    // title: 'Smart Cameras',
-    // subtitle: 'From ₹999',
     image: 'https://assets.myntassets.com/f_webp,w_163,c_limit,fl_progressive,dpr_2.0/assets/images/2025/SEPTEMBER/10/78FfQYIC_919fcb5e0853428f91d82ff22abb0330.jpg',
   },
   {
     id: '3',
-    // title: 'Casual Shirts',
-    // subtitle: 'From ₹499',
     image: 'https://assets.myntassets.com/f_webp,w_163,c_limit,fl_progressive,dpr_2.0/assets/images/2025/SEPTEMBER/10/pthvTXAF_4625344710f6482daf30cee28141f5c6.jpg',
   },
   {
     id: '4',
-    // title: 'Watches',
-    // subtitle: 'From ₹799',
     image: 'https://assets.myntassets.com/f_webp,w_163,c_limit,fl_progressive,dpr_2.0/assets/images/2025/SEPTEMBER/10/vE8kOjRa_18df9b4bfda34a7c89f49f68bb0ee7dc.jpg',
   },
   {
     id: '5',
-    // title: 'Watches',
-    // subtitle: 'From ₹799',
     image: 'https://assets.myntassets.com/f_webp,w_163,c_limit,fl_progressive,dpr_2.0/assets/images/2025/SEPTEMBER/10/7RuyNIfm_6d287c418718450f92acd1d50f6f77ac.jpg',
   },
   {
     id: '6',
-    // title: 'Watches',
-    // subtitle: 'From ₹799',
     image: 'https://assets.myntassets.com/f_webp,w_163,c_limit,fl_progressive,dpr_2.0/assets/images/2025/SEPTEMBER/10/dCsgxX0K_c3bcc068e7eb48d49123b4713c832266.jpg',
   },
   {
     id: '7',
-    // title: 'Watches',
-    // subtitle: 'From ₹799',
     image: 'https://assets.myntassets.com/f_webp,w_163,c_limit,fl_progressive,dpr_2.0/assets/images/2025/SEPTEMBER/10/NKgaJWXS_1a9633f7982347a59fc298d68fe9e6e2.jpg',
   },
 ];
 
 const BestDeals = () => {
+  const navigation = useNavigation();
+  const { categories } = useSelector((state) => state.category); // ⬅️ Access Redux categories
+
+  const handlePress = () => {
+    const clothesCategory = categories.find(
+      (cat) => cat.category?.toLowerCase() === 'clothes'
+    );
+
+    if (clothesCategory) {
+      navigation.navigate('CategoryProducts', {
+        categoryId: clothesCategory._id,
+        categoryName: clothesCategory.category,
+      });
+    } else {
+      console.warn('Clothes category not found');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Trending</Text>
@@ -56,10 +69,8 @@ const BestDeals = () => {
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card}>
+          <TouchableOpacity style={styles.card} onPress={handlePress}>
             <Image source={{ uri: item.image }} style={styles.image} />
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
           </TouchableOpacity>
         )}
       />
@@ -88,7 +99,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3, 
+    shadowRadius: 3,
     elevation: 2,
   },
   image: {

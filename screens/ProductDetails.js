@@ -1209,6 +1209,9 @@ const styles = StyleSheet.create({
     width: screenWidth,
     height: 400,
     resizeMode: 'cover',
+    marginTop: 26,
+    marginLeft: 10,
+    marginRight: 20,
   },
   dotsContainer: {
     flexDirection: 'row',

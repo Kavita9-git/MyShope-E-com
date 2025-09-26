@@ -253,9 +253,10 @@ const Home = () => {
         {/* Categories Section */}
         <Text style={styles.sectionTitle}>Shop by Category</Text>
         <Categories />
+       
 
         {/* Best Deals Section */}
-        <BestDeals />
+        {/* <BestDeals /> */}
         <Trendings />
 
         {/* Products Section - Grouped by Category */}
